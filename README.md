@@ -82,10 +82,16 @@ npm run dev
 
 ## Rodando com Docker
 
+São **dois arquivos `.env` diferentes**: um na raiz (usado só pelo próprio
+`docker-compose.yml` pra resolver variáveis como a senha do Postgres) e outro
+em `backend/` (usado pela aplicação em tempo de execução). Repita os mesmos
+valores de `PG_USER`/`PG_PASSWORD`/`PG_DATABASE` nos dois.
+
 ```bash
-cp backend/.env.example backend/.env   # preencher
+cp .env.example .env                   # preencher (raiz)
+cp backend/.env.example backend/.env   # preencher (WiBi, Postgres, JWT...)
 docker compose up --build -d
-docker compose exec backend node src/scripts/migrate.js
+docker compose exec backend node src/db/migrate.js
 docker compose exec backend node src/scripts/criarMotorista.js "Fulano" fulano senha123
 ```
 
