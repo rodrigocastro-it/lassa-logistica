@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../db/pg');
+const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 
 const router = express.Router();
 
@@ -59,6 +60,29 @@ router.get('/rotas/:id', async (req, res) => {
         paradas: paradasResult.rows,
         paradasManuais: paradasManuaisResult.rows
     });
+});
+
+router.get('/rotas/:id/posicao', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const cargaResult = await pool.query('SELECT veiculo_placa FROM cargas WHERE id = $1', [id]);
+    if (cargaResult.rows.length === 0) {
+        return res.status(404).json({ erro: 'Rota não encontrada.' });
+    }
+    const placa = cargaResult.rows[0].veiculo_placa;
+    if (!placa) {
+        return res.status(404).json({ erro: 'Rota sem veículo cadastrado.' });
+    }
+
+    try {
+        const posicao = await obterPosicaoPorPlaca(placa);
+        if (!posicao) {
+            return res.status(404).json({ erro: 'Veículo não encontrado na Point Track.' });
+        }
+        res.json(posicao);
+    } catch (err) {
+        console.error('Erro ao consultar Point Track:', err);
+        res.status(502).json({ erro: 'Falha ao consultar a Point Track.' });
+    }
 });
 
 module.exports = router;

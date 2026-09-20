@@ -6,6 +6,7 @@ import Login from './pages/motorista/Login';
 import RotaDoDia from './pages/motorista/RotaDoDia';
 import DetalheCliente from './pages/motorista/DetalheCliente';
 import Paradas from './pages/motorista/Paradas';
+import Mapa from './pages/motorista/Mapa';
 
 import DashboardRotas from './pages/dashboard/DashboardRotas';
 import DashboardRotaDetalhe from './pages/dashboard/DashboardRotaDetalhe';
@@ -24,6 +25,7 @@ export default function App() {
                     <Route path="/rota" element={<RotaPrivada><RotaDoDia /></RotaPrivada>} />
                     <Route path="/cliente/:cargaId/:paradaId" element={<RotaPrivada><DetalheCliente /></RotaPrivada>} />
                     <Route path="/paradas" element={<RotaPrivada><Paradas /></RotaPrivada>} />
+                    <Route path="/mapa" element={<RotaPrivada><Mapa /></RotaPrivada>} />
 
                     <Route path="/dashboard" element={<DashboardRotas />} />
                     <Route path="/dashboard/rotas/:id" element={<DashboardRotaDetalhe />} />

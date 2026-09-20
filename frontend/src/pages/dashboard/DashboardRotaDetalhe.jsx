@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../services/api';
+import MapaVeiculo from '../../components/MapaVeiculo';
 
 const STATUS_COR = {
     pendente: 'bg-gray-200 text-gray-700',
@@ -13,9 +14,19 @@ const STATUS_COR = {
 export default function DashboardRotaDetalhe() {
     const { id } = useParams();
     const [rota, setRota] = useState(null);
+    const [posicao, setPosicao] = useState(null);
 
     useEffect(() => {
         api.dashboardRotaDetalhe(id).then(setRota);
+    }, [id]);
+
+    useEffect(() => {
+        function buscarPosicao() {
+            api.dashboardRotaPosicao(id).then(setPosicao).catch(() => setPosicao(null));
+        }
+        buscarPosicao();
+        const intervalo = setInterval(buscarPosicao, 30000);
+        return () => clearInterval(intervalo);
     }, [id]);
 
     if (!rota) return <p className="p-6 text-center text-gray-500">Carregando...</p>;
@@ -29,6 +40,15 @@ export default function DashboardRotaDetalhe() {
                 <p className="text-gray-600">Motorista: {rota.motorista_nome || '—'} · Veículo: {rota.veiculo_placa || '—'}</p>
                 <p className="text-gray-600">Status: {rota.status}</p>
             </div>
+
+            {posicao && (
+                <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
+                    <MapaVeiculo latitude={posicao.latitude} longitude={posicao.longitude} popup={rota.veiculo_placa} />
+                    <p className="text-sm text-gray-600">
+                        {posicao.velocidadeKmh ?? '—'} km/h · atualizado em {posicao.atualizadoEm || '—'}
+                    </p>
+                </div>
+            )}
 
             <div className="bg-white rounded-xl shadow-sm divide-y">
                 {rota.paradas.map((p) => (

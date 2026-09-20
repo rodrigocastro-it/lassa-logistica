@@ -3,8 +3,8 @@ import { NavLink } from 'react-router-dom';
 
 const itens = [
     { to: '/rota', label: 'Rota' },
-    { to: '/paradas', label: 'Paradas' },
-    { to: '/mensagens', label: 'Mensagens' }
+    { to: '/mapa', label: 'Mapa' },
+    { to: '/paradas', label: 'Paradas' }
 ];
 
 export default function MenuMotorista() {

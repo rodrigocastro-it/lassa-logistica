@@ -33,5 +33,7 @@ export const api = {
         request('/paradas/manuais', { method: 'POST', body: { cargaId, tipo, observacao } }),
     encerrarParadaManual: (id) => request(`/paradas/manuais/${id}/encerrar`, { method: 'PATCH' }),
     dashboardRotas: (data) => request(`/dashboard/rotas${data ? `?data=${data}` : ''}`),
-    dashboardRotaDetalhe: (id) => request(`/dashboard/rotas/${id}`)
+    dashboardRotaDetalhe: (id) => request(`/dashboard/rotas/${id}`),
+    dashboardRotaPosicao: (id) => request(`/dashboard/rotas/${id}/posicao`),
+    posicaoVeiculo: (placa) => request(`/pointtrack/posicao/${placa}`)
 };
