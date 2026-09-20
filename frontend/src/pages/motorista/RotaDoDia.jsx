@@ -32,6 +32,12 @@ export default function RotaDoDia() {
         setCarga(detalhe);
     }
 
+    async function handleFinalizar() {
+        if (!window.confirm('Finalizar essa rota? Você vai poder carregar outra carga em seguida.')) return;
+        await api.finalizarCarga(carga.id);
+        setCarga(null);
+    }
+
     async function handleBuscarCarga(e) {
         e.preventDefault();
         setErro('');
@@ -77,10 +83,15 @@ export default function RotaDoDia() {
 
     return (
         <div className="min-h-screen pb-20">
-            <header className="bg-blue-700 text-white p-4 rounded-b-2xl">
-                <p className="text-sm opacity-80">Carga #{carga.wibi_ca_id}</p>
-                <h1 className="text-xl font-bold">{carga.paradas.length} paradas</h1>
-                <p className="text-sm opacity-90">Veículo: {carga.veiculo_placa || '—'}</p>
+            <header className="bg-blue-700 text-white p-4 rounded-b-2xl flex items-start justify-between">
+                <div>
+                    <p className="text-sm opacity-80">Carga #{carga.wibi_ca_id}</p>
+                    <h1 className="text-xl font-bold">{carga.paradas.length} paradas</h1>
+                    <p className="text-sm opacity-90">Veículo: {carga.veiculo_placa || '—'}</p>
+                </div>
+                <button onClick={handleFinalizar} className="text-xs bg-blue-800 rounded-lg px-3 py-2">
+                    Finalizar rota
+                </button>
             </header>
 
             <ul className="p-4 space-y-3">

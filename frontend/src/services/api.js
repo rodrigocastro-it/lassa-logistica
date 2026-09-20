@@ -26,6 +26,7 @@ export const api = {
     carregarCarga: (caId) => request('/cargas/carregar', { method: 'POST', body: { caId } }),
     minhasCargas: () => request('/cargas'),
     obterCarga: (id) => request(`/cargas/${id}`),
+    finalizarCarga: (id) => request(`/cargas/${id}/finalizar`, { method: 'PATCH' }),
     atualizarStatusParada: (id, status, problemaDescricao) =>
         request(`/paradas/${id}/status`, { method: 'PATCH', body: { status, problemaDescricao } }),
     listarParadasManuais: (cargaId) => request(`/paradas/manuais/carga/${cargaId}`),

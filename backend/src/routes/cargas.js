@@ -113,6 +113,23 @@ router.get('/:id', async (req, res) => {
     res.json({ ...cargaResult.rows[0], paradas: paradasResult.rows });
 });
 
+// Encerra a carga atual (libera o motorista pra carregar outra em /rota).
+// Não exige que todas as paradas estejam concluídas — o motorista pode
+// precisar encerrar mesmo com pendências/problemas registrados.
+router.patch('/:id/finalizar', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await pool.query(
+        `UPDATE cargas SET status = 'finalizada', atualizado_em = now()
+         WHERE id = $1 AND motorista_id = $2
+         RETURNING *`,
+        [id, req.motorista.id]
+    );
+    if (result.rows.length === 0) {
+        return res.status(404).json({ erro: 'Carga não encontrada.' });
+    }
+    res.json(result.rows[0]);
+});
+
 router.get('/', async (req, res) => {
     const result = await pool.query(
         `SELECT c.*, m.nome AS motorista_nome
