@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lassa-logistica-postgres
+    environment:
+      POSTGRES_USER: ${PG_USER:-lassa_logistica}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE:-lassa_logistica}
+    volumes:
+      - lassa_logistica_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lassa-logistica-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      PG_HOST: postgres
+    depends_on:
+      - postgres
+    ports:
+      - "8788:8788"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8788/api}
+    container_name: lassa-logistica-frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  lassa_logistica_pgdata:
