@@ -1,7 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/pg');
 const { getCargaByNumero } = require('../services/wibiCargaService');
-const { otimizarSequencia } = require('../services/routeOptimizer');
+const { otimizarSequencia, distanciaHaversineKm } = require('../services/routeOptimizer');
 const { origem } = require('../config/origem');
 const { autenticar } = require('../middleware/auth');
 
@@ -80,6 +80,15 @@ router.post('/carregar', async (req, res) => {
             ? otimizarSequencia(origem, paradasParaOtimizar)
             : paradasParaOtimizar.map((p, idx) => ({ ...p, sequencia: idx + 1 }));
 
+        // Distância total = soma dos trechos entre paradas + volta da última
+        // parada até a origem (toda rota da Lassa sai e retorna pra empresa).
+        const distanciaIdaKm = ordenadas.reduce((acc, p) => acc + (p.distanciaKm || 0), 0);
+        const ultimaComCoordenada = [...ordenadas].reverse().find((p) => p.latitude != null && p.longitude != null);
+        const distanciaVoltaKm = ultimaComCoordenada
+            ? distanciaHaversineKm(ultimaComCoordenada.latitude, ultimaComCoordenada.longitude, origem.lat, origem.lng)
+            : 0;
+        const distanciaTotalKm = distanciaIdaKm + distanciaVoltaKm;
+
         for (const p of ordenadas) {
             await client.query(
                 `INSERT INTO paradas
@@ -88,6 +97,11 @@ router.post('/carregar', async (req, res) => {
                 [cargaId, p.wibiVdCodigo, p.wibiClCodigo, p.sequencia, p.clienteNome, p.clienteEndereco, p.clienteTelefone, p.latitude, p.longitude]
             );
         }
+
+        await client.query(
+            'UPDATE cargas SET distancia_total_km = $1 WHERE id = $2',
+            [distanciaTotalKm, cargaId]
+        );
 
         await client.query('COMMIT');
         res.status(201).json({ id: cargaId });

@@ -3,10 +3,14 @@ const path = require('path');
 const { pool } = require('./pg');
 
 async function migrate() {
-    const sqlPath = path.join(__dirname, '..', '..', 'migrations', '001_init.sql');
-    const sqlText = fs.readFileSync(sqlPath, 'utf8');
-    await pool.query(sqlText);
-    console.log('✅ Migração aplicada com sucesso.');
+    const dir = path.join(__dirname, '..', '..', 'migrations');
+    const arquivos = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
+
+    for (const arquivo of arquivos) {
+        const sqlText = fs.readFileSync(path.join(dir, arquivo), 'utf8');
+        await pool.query(sqlText);
+        console.log(`✅ Migração aplicada: ${arquivo}`);
+    }
     await pool.end();
 }
 

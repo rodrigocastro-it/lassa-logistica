@@ -34,8 +34,11 @@ Pontos ainda **não confirmados** (não usar sem validar antes):
 - Significado exato dos códigos `t_carga.ca_status` (char) e `t_vendas.vd_status` (int).
 - Tabela "oficial" de motorista do WiBi (`t_veiculos.mt_codigo`) — não usada aqui,
   pois o login do motorista é um cadastro próprio deste sistema.
-- Coordenadas de origem (galpão/CD) para a otimização de rota — configurar em
-  `LASSA_ORIGEM_LAT`/`LASSA_ORIGEM_LNG` no `.env` do backend.
+- Coordenadas de origem: confirmadas em 2026-09-21 (a empresa Lassa em Sobral,
+  toda rota sai e retorna pra lá). Valor padrão em
+  `backend/src/config/origem.js` = centro da cerca eletrônica "Lassa" da
+  própria Point Track; sobrescrevível via `LASSA_ORIGEM_LAT`/`LASSA_ORIGEM_LNG`
+  no `.env` se um dia tiverem uma coordenada mais precisa do portão.
 - `import.Cad_Cliente` existe no banco mas está incompleta/desatualizada — **não
   usar essa tabela**, usar sempre `dbo.t_clientes` + `dbo.t_entidades` + `dbo.t_enderecos`.
 

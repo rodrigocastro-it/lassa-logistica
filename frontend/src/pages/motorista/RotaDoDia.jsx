@@ -88,6 +88,9 @@ export default function RotaDoDia() {
                     <p className="text-sm opacity-80">Carga #{carga.wibi_ca_id}</p>
                     <h1 className="text-xl font-bold">{carga.paradas.length} paradas</h1>
                     <p className="text-sm opacity-90">Veículo: {carga.veiculo_placa || '—'}</p>
+                    {carga.distancia_total_km && (
+                        <p className="text-sm opacity-90">~{Number(carga.distancia_total_km).toFixed(0)} km (ida e volta)</p>
+                    )}
                 </div>
                 <button onClick={handleFinalizar} className="text-xs bg-blue-800 rounded-lg px-3 py-2">
                     Finalizar rota

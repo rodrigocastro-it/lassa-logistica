@@ -39,6 +39,9 @@ export default function DashboardRotaDetalhe() {
                 <h1 className="text-xl font-bold">Carga #{rota.wibi_ca_id}</h1>
                 <p className="text-gray-600">Motorista: {rota.motorista_nome || '—'} · Veículo: {rota.veiculo_placa || '—'}</p>
                 <p className="text-gray-600">Status: {rota.status}</p>
+                {rota.distancia_total_km && (
+                    <p className="text-gray-600">~{Number(rota.distancia_total_km).toFixed(0)} km (ida e volta, estimado)</p>
+                )}
             </div>
 
             {posicao && (
