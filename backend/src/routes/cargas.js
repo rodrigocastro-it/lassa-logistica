@@ -39,7 +39,7 @@ router.post('/carregar', async (req, res) => {
 
     const existente = await pool.query('SELECT id FROM cargas WHERE wibi_ca_id = $1', [caId]);
     if (existente.rows.length > 0) {
-        return res.redirect(307, `/api/cargas/${existente.rows[0].id}`);
+        return res.status(200).json({ id: existente.rows[0].id });
     }
 
     const cargaWibi = await getCargaByNumero(caId);
