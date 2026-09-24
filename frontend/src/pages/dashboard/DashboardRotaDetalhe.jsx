@@ -25,10 +25,25 @@ export default function DashboardRotaDetalhe() {
     const { id } = useParams();
     const [rota, setRota] = useState(null);
     const [posicao, setPosicao] = useState(null);
+    const [motoristas, setMotoristas] = useState([]);
+    const [reatribuindo, setReatribuindo] = useState(false);
 
     useEffect(() => {
         api.dashboardRotaDetalhe(id).then(setRota);
+        api.listarMotoristas().then(setMotoristas).catch(() => {});
     }, [id]);
+
+    async function handleReatribuir(e) {
+        const motoristaId = e.target.value || null;
+        setReatribuindo(true);
+        try {
+            await api.reatribuirMotorista(id, motoristaId);
+            const detalhe = await api.dashboardRotaDetalhe(id);
+            setRota(detalhe);
+        } finally {
+            setReatribuindo(false);
+        }
+    }
 
     useEffect(() => {
         function buscarPosicao() {
@@ -50,13 +65,27 @@ export default function DashboardRotaDetalhe() {
                 </a>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm p-4">
+            <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
                 <h1 className="text-xl font-bold">Carga #{rota.wibi_ca_id}</h1>
-                <p className="text-gray-600">Motorista: {rota.motorista_nome || '—'} · Veículo: {rota.veiculo_placa || '—'}</p>
+                <p className="text-gray-600">Veículo: {rota.veiculo_placa || '—'}</p>
                 <p className="text-gray-600">Status: {rota.status}</p>
                 {rota.distancia_total_km && (
                     <p className="text-gray-600">~{Number(rota.distancia_total_km).toFixed(0)} km (ida e volta, estimado)</p>
                 )}
+                <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Motorista:</label>
+                    <select
+                        value={rota.motorista_id || ''}
+                        onChange={handleReatribuir}
+                        disabled={reatribuindo}
+                        className="border rounded-lg px-2 py-1 text-sm"
+                    >
+                        <option value="">— sem motorista —</option>
+                        {motoristas.map((m) => (
+                            <option key={m.id} value={m.id}>{m.nome} ({m.usuario})</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {posicao && (

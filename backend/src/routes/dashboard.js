@@ -31,6 +31,13 @@ router.post('/rotas/montar', async (req, res) => {
     }
 });
 
+router.get('/motoristas', async (req, res) => {
+    const result = await pool.query(
+        'SELECT id, nome, usuario FROM motoristas WHERE ativo ORDER BY nome'
+    );
+    res.json(result.rows);
+});
+
 router.get('/rotas', async (req, res) => {
     const { data } = req.query; // YYYY-MM-DD opcional
 
@@ -83,6 +90,24 @@ router.get('/rotas/:id', async (req, res) => {
         paradas: paradasResult.rows,
         paradasManuais: paradasManuaisResult.rows
     });
+});
+
+// Reatribui (ou remove) o motorista responsável por uma carga já carregada
+// — útil pra troca de motorista de última hora, ou pra corrigir um teste.
+// motoristaId null libera a carga (sem motorista, como se tivesse sido
+// montada pela torre de controle e ainda não assumida por ninguém).
+router.patch('/rotas/:id/motorista', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const motoristaId = req.body.motoristaId != null ? parseInt(req.body.motoristaId, 10) : null;
+
+    const result = await pool.query(
+        `UPDATE cargas SET motorista_id = $1, atualizado_em = now() WHERE id = $2 RETURNING *`,
+        [motoristaId, id]
+    );
+    if (result.rows.length === 0) {
+        return res.status(404).json({ erro: 'Rota não encontrada.' });
+    }
+    res.json(result.rows[0]);
 });
 
 router.get('/rotas/:id/posicao', async (req, res) => {
