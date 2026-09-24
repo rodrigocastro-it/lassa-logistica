@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCargaAtual } from '../../context/CargaAtualContext';
 
 export default function Login() {
     const [usuario, setUsuario] = useState('');
@@ -8,6 +9,7 @@ export default function Login() {
     const [erro, setErro] = useState('');
     const [carregando, setCarregando] = useState(false);
     const { login } = useAuth();
+    const { setCargaAtualId } = useCargaAtual();
     const navigate = useNavigate();
 
     async function handleSubmit(e) {
@@ -16,6 +18,9 @@ export default function Login() {
         setCarregando(true);
         try {
             await login(usuario, senha);
+            // Um login novo nunca deve herdar a carga de outro motorista que
+            // usou esse mesmo navegador antes.
+            setCargaAtualId(null);
             navigate('/rota');
         } catch (err) {
             setErro(err.message);

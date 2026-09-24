@@ -49,9 +49,15 @@ router.post('/carregar', async (req, res) => {
     }
 });
 
+// Só retorna a carga se ela for do motorista logado — sem isso, qualquer
+// motorista autenticado conseguiria ver os dados de uma carga de outro
+// (bastava adivinhar/ter o id).
 router.get('/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
-    const cargaResult = await pool.query('SELECT * FROM cargas WHERE id = $1', [id]);
+    const cargaResult = await pool.query(
+        'SELECT * FROM cargas WHERE id = $1 AND motorista_id = $2',
+        [id, req.motorista.id]
+    );
     if (cargaResult.rows.length === 0) {
         return res.status(404).json({ erro: 'Carga não encontrada.' });
     }

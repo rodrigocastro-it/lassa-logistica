@@ -37,7 +37,13 @@ export default function RotaDoDia() {
 
     async function handleFinalizar() {
         if (!window.confirm('Finalizar essa rota? Você vai poder carregar outra carga em seguida.')) return;
-        await api.finalizarCarga(carga.id);
+        try {
+            await api.finalizarCarga(carga.id);
+        } catch (err) {
+            // Mesmo se o servidor recusar (ex.: carga não é mais sua), nunca
+            // trava a tela — sai da carga localmente de qualquer jeito.
+            console.error('Erro ao finalizar:', err);
+        }
         setCarga(null);
         setCargaAtualId(null);
     }
