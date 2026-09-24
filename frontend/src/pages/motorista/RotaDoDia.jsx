@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCargaAtual } from '../../context/CargaAtualContext';
 import MenuMotorista from './MenuMotorista';
 
 const STATUS_COR = {
@@ -18,24 +19,27 @@ export default function RotaDoDia() {
     const [carregando, setCarregando] = useState(false);
     const [erro, setErro] = useState('');
     const { logout } = useAuth();
+    const { cargaAtualId, setCargaAtualId } = useCargaAtual();
     const navigate = useNavigate();
 
     useEffect(() => {
-        api.minhasCargas().then((cargas) => {
-            const emRota = cargas.find((c) => c.status === 'em_rota');
-            if (emRota) carregarDetalhe(emRota.id);
-        }).catch(() => {});
+        if (cargaAtualId) {
+            carregarDetalhe(cargaAtualId).catch(() => setCargaAtualId(null));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     async function carregarDetalhe(id) {
         const detalhe = await api.obterCarga(id);
         setCarga(detalhe);
+        setCargaAtualId(detalhe.id);
     }
 
     async function handleFinalizar() {
         if (!window.confirm('Finalizar essa rota? Você vai poder carregar outra carga em seguida.')) return;
         await api.finalizarCarga(carga.id);
         setCarga(null);
+        setCargaAtualId(null);
     }
 
     async function handleBuscarCarga(e) {

@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { useCargaAtual } from '../../context/CargaAtualContext';
 import MapaVeiculo from '../../components/MapaVeiculo';
 import MenuMotorista from './MenuMotorista';
 
 export default function Mapa() {
+    const { cargaAtualId } = useCargaAtual();
     const [carga, setCarga] = useState(null);
     const [posicao, setPosicao] = useState(null);
     const [erro, setErro] = useState('');
 
     useEffect(() => {
-        api.minhasCargas().then((cargas) => {
-            const emRota = cargas.find((c) => c.status === 'em_rota');
-            setCarga(emRota || null);
-        });
-    }, []);
+        if (!cargaAtualId) {
+            setCarga(null);
+            return;
+        }
+        api.obterCarga(cargaAtualId).then(setCarga).catch(() => setCarga(null));
+    }, [cargaAtualId]);
 
     useEffect(() => {
         if (!carga?.veiculo_placa) return;

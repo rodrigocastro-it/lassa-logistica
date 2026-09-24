@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CargaAtualProvider } from './context/CargaAtualContext';
 
 import Login from './pages/motorista/Login';
 import RotaDoDia from './pages/motorista/RotaDoDia';
@@ -20,6 +21,7 @@ function RotaPrivada({ children }) {
 export default function App() {
     return (
         <AuthProvider>
+          <CargaAtualProvider>
             <BrowserRouter>
                 <Routes>
                     <Route path="/login" element={<Login />} />
@@ -35,6 +37,7 @@ export default function App() {
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </BrowserRouter>
+          </CargaAtualProvider>
         </AuthProvider>
     );
 }

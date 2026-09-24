@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { useCargaAtual } from '../../context/CargaAtualContext';
 import MenuMotorista from './MenuMotorista';
 
 function formatarDuracao(inicio, fim) {
@@ -12,25 +13,25 @@ function formatarDuracao(inicio, fim) {
 }
 
 export default function Paradas() {
-    const [cargaId, setCargaId] = useState(null);
+    const { cargaAtualId } = useCargaAtual();
     const [paradas, setParadas] = useState([]);
     const [tipo, setTipo] = useState('Almoço');
     const [observacao, setObservacao] = useState('');
 
     async function carregar() {
-        const cargas = await api.minhasCargas();
-        const emRota = cargas.find((c) => c.status === 'em_rota');
-        if (!emRota) return;
-        setCargaId(emRota.id);
-        const lista = await api.listarParadasManuais(emRota.id);
+        if (!cargaAtualId) {
+            setParadas([]);
+            return;
+        }
+        const lista = await api.listarParadasManuais(cargaAtualId);
         setParadas(lista);
     }
 
-    useEffect(() => { carregar(); }, []);
+    useEffect(() => { carregar(); }, [cargaAtualId]);
 
     async function adicionarParada(e) {
         e.preventDefault();
-        await api.criarParadaManual(cargaId, tipo, observacao);
+        await api.criarParadaManual(cargaAtualId, tipo, observacao);
         setObservacao('');
         carregar();
     }
@@ -54,6 +55,10 @@ export default function Paradas() {
                     Tempo total: {String(Math.floor(tempoTotalMin / 60)).padStart(2, '0')}:{String(tempoTotalMin % 60).padStart(2, '0')}
                 </p>
             </div>
+
+            {!cargaAtualId && (
+                <p className="text-gray-500">Carregue uma rota primeiro pra registrar paradas.</p>
+            )}
 
             <ul className="space-y-3">
                 {paradas.map((p) => (
@@ -80,7 +85,7 @@ export default function Paradas() {
                 ))}
             </ul>
 
-            {cargaId && (
+            {cargaAtualId && (
                 <form onSubmit={adicionarParada} className="bg-white rounded-xl shadow-sm p-4 space-y-2">
                     <select
                         value={tipo}
