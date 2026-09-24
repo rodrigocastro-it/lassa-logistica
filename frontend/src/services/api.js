@@ -36,5 +36,7 @@ export const api = {
     dashboardRotas: (data) => request(`/dashboard/rotas${data ? `?data=${data}` : ''}`),
     dashboardRotaDetalhe: (id) => request(`/dashboard/rotas/${id}`),
     dashboardRotaPosicao: (id) => request(`/dashboard/rotas/${id}/posicao`),
-    posicaoVeiculo: (placa) => request(`/pointtrack/posicao/${placa}`)
+    posicaoVeiculo: (placa) => request(`/pointtrack/posicao/${placa}`),
+    montarRota: (caId) => request('/dashboard/rotas/montar', { method: 'POST', body: { caId }, auth: false }),
+    exportarRotaUrl: (id) => `${API_BASE_URL}/dashboard/rotas/${id}/exportar`
 };

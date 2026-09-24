@@ -7,8 +7,10 @@
  * quem chama `otimizarSequencia`.
  *
  * Paradas sem latitude/longitude (geocodificação ausente ou com erro) ficam
- * no fim da lista, na ordem original em que chegaram — nunca são descartadas
- * nem tratadas como se tivessem coordenada 0,0.
+ * no fim da lista, ordenadas por CEP como aproximação de proximidade
+ * geográfica (CEPs brasileiros seguem uma hierarquia regional) — não é uma
+ * rota real, só evita a ordem arbitrária que veio do WiBi. Nunca são
+ * descartadas nem tratadas como se tivessem coordenada 0,0.
  */
 
 function distanciaHaversineKm(lat1, lon1, lat2, lon2) {
@@ -30,7 +32,9 @@ function distanciaHaversineKm(lat1, lon1, lat2, lon2) {
  */
 function otimizarSequencia(origem, paradas) {
     const comCoordenada = paradas.filter((p) => p.latitude != null && p.longitude != null);
-    const semCoordenada = paradas.filter((p) => p.latitude == null || p.longitude == null);
+    const semCoordenada = paradas
+        .filter((p) => p.latitude == null || p.longitude == null)
+        .sort((a, b) => (a.cep || '').localeCompare(b.cep || ''));
 
     const restantes = [...comCoordenada];
     const ordenadas = [];

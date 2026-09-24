@@ -1,8 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/pg');
 const { getCargaByNumero } = require('../services/wibiCargaService');
-const { otimizarSequencia, distanciaHaversineKm } = require('../services/routeOptimizer');
-const { origem } = require('../config/origem');
+const { montarOuObterRota } = require('../services/montarRotaService');
 const { autenticar } = require('../middleware/auth');
 
 const router = express.Router();
@@ -30,87 +29,23 @@ router.get('/wibi/:caId', async (req, res) => {
 
 // Carrega a carga do WiBi, otimiza a sequência de paradas e grava localmente
 // vinculada ao motorista logado. Idempotente: se a carga já foi carregada
-// antes, apenas retorna o estado atual (não reotimiza nem apaga progresso).
+// antes (inclusive montada pela torre de controle sem motorista ainda),
+// apenas retorna o estado atual e assume a rota pra esse motorista.
 router.post('/carregar', async (req, res) => {
     const caId = parseInt(req.body.caId, 10);
     if (!Number.isInteger(caId)) {
         return res.status(400).json({ erro: 'Número de carga inválido.' });
     }
 
-    const existente = await pool.query('SELECT id FROM cargas WHERE wibi_ca_id = $1', [caId]);
-    if (existente.rows.length > 0) {
-        return res.status(200).json({ id: existente.rows[0].id });
-    }
-
-    const cargaWibi = await getCargaByNumero(caId);
-    if (!cargaWibi) {
-        return res.status(404).json({ erro: `Carga ${caId} não encontrada no WiBi.` });
-    }
-
-    const client = await pool.connect();
     try {
-        await client.query('BEGIN');
-
-        const cargaInsert = await client.query(
-            `INSERT INTO cargas (wibi_ca_id, data_entrega, veiculo_placa, motorista_id, origem_lat, origem_lng, status)
-             VALUES ($1, $2, $3, $4, $5, $6, 'em_rota')
-             RETURNING id`,
-            [
-                cargaWibi.caId,
-                cargaWibi.dataEntrega,
-                cargaWibi.veiculo?.placa || null,
-                req.motorista.id,
-                origem.lat,
-                origem.lng
-            ]
-        );
-        const cargaId = cargaInsert.rows[0].id;
-
-        const paradasParaOtimizar = cargaWibi.paradas.map((p) => ({
-            wibiVdCodigo: p.vdCodigo,
-            wibiClCodigo: p.clCodigo,
-            clienteNome: p.clienteNome,
-            clienteEndereco: p.endereco,
-            clienteTelefone: p.telefone,
-            latitude: p.latitude,
-            longitude: p.longitude
-        }));
-
-        const ordenadas = origem.lat != null && origem.lng != null
-            ? otimizarSequencia(origem, paradasParaOtimizar)
-            : paradasParaOtimizar.map((p, idx) => ({ ...p, sequencia: idx + 1 }));
-
-        // Distância total = soma dos trechos entre paradas + volta da última
-        // parada até a origem (toda rota da Lassa sai e retorna pra empresa).
-        const distanciaIdaKm = ordenadas.reduce((acc, p) => acc + (p.distanciaKm || 0), 0);
-        const ultimaComCoordenada = [...ordenadas].reverse().find((p) => p.latitude != null && p.longitude != null);
-        const distanciaVoltaKm = ultimaComCoordenada
-            ? distanciaHaversineKm(ultimaComCoordenada.latitude, ultimaComCoordenada.longitude, origem.lat, origem.lng)
-            : 0;
-        const distanciaTotalKm = distanciaIdaKm + distanciaVoltaKm;
-
-        for (const p of ordenadas) {
-            await client.query(
-                `INSERT INTO paradas
-                    (carga_id, wibi_vd_codigo, wibi_cl_codigo, sequencia, cliente_nome, cliente_endereco, cliente_telefone, latitude, longitude)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [cargaId, p.wibiVdCodigo, p.wibiClCodigo, p.sequencia, p.clienteNome, p.clienteEndereco, p.clienteTelefone, p.latitude, p.longitude]
-            );
+        const resultado = await montarOuObterRota(caId, req.motorista.id);
+        if (!resultado) {
+            return res.status(404).json({ erro: `Carga ${caId} não encontrada no WiBi.` });
         }
-
-        await client.query(
-            'UPDATE cargas SET distancia_total_km = $1 WHERE id = $2',
-            [distanciaTotalKm, cargaId]
-        );
-
-        await client.query('COMMIT');
-        res.status(201).json({ id: cargaId });
+        res.status(resultado.jaExistia ? 200 : 201).json({ id: resultado.id });
     } catch (err) {
-        await client.query('ROLLBACK');
         console.error('Erro ao carregar carga:', err);
         res.status(500).json({ erro: 'Falha ao carregar a carga.' });
-    } finally {
-        client.release();
     }
 });
 

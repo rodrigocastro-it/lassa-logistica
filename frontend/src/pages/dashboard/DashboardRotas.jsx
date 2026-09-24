@@ -20,14 +20,19 @@ export default function DashboardRotas() {
 
     return (
         <div className="min-h-screen p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <h1 className="text-2xl font-bold text-blue-700">Dashboard de Rotas</h1>
-                <input
-                    type="date"
-                    value={data}
-                    onChange={(e) => setData(e.target.value)}
-                    className="border rounded-lg px-3 py-2"
-                />
+                <div className="flex items-center gap-3">
+                    <input
+                        type="date"
+                        value={data}
+                        onChange={(e) => setData(e.target.value)}
+                        className="border rounded-lg px-3 py-2"
+                    />
+                    <Link to="/dashboard/montar" className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm">
+                        + Montar rota
+                    </Link>
+                </div>
             </div>
 
             <div className="grid gap-3">
