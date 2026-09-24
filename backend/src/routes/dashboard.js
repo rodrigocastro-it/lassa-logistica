@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pg');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { montarOuObterRota } = require('../services/montarRotaService');
+const { distanciaHaversineKm } = require('../services/routeOptimizer');
 
 const router = express.Router();
 
@@ -122,16 +123,30 @@ router.get('/rotas/:id/exportar', async (req, res) => {
 
     const escapar = (v) => String(v ?? '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
     const linhas = [
-        ['Sequência', 'Cliente', 'Endereço', 'Telefone', 'Latitude', 'Longitude', 'Status'].join(';'),
-        ...paradasResult.rows.map((p) => [
-            p.sequencia,
-            escapar(p.cliente_nome),
-            escapar(p.cliente_endereco),
-            escapar(p.cliente_telefone),
-            p.latitude ?? '',
-            p.longitude ?? '',
-            p.status
-        ].join(';'))
+        [
+            'Sequência', 'Cliente', 'Endereço', 'Telefone', 'Status',
+            'Latitude cadastro', 'Longitude cadastro',
+            'Latitude chegada (GPS real)', 'Longitude chegada (GPS real)',
+            'Diferença (km)'
+        ].join(';'),
+        ...paradasResult.rows.map((p) => {
+            const temAmbos = p.latitude != null && p.longitude != null && p.chegada_lat != null && p.chegada_lng != null;
+            const diferencaKm = temAmbos
+                ? distanciaHaversineKm(Number(p.latitude), Number(p.longitude), Number(p.chegada_lat), Number(p.chegada_lng)).toFixed(2)
+                : '';
+            return [
+                p.sequencia,
+                escapar(p.cliente_nome),
+                escapar(p.cliente_endereco),
+                escapar(p.cliente_telefone),
+                p.status,
+                p.latitude ?? '',
+                p.longitude ?? '',
+                p.chegada_lat ?? '',
+                p.chegada_lng ?? '',
+                diferencaKm
+            ].join(';');
+        })
     ];
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');

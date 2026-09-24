@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/pg');
 const { autenticar } = require('../middleware/auth');
+const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 
 const router = express.Router();
 router.use(autenticar);
@@ -15,6 +16,13 @@ const COLUNA_TIMESTAMP = {
 
 // Marca chegada / início / fim / problema. Cada marcação grava a data/hora
 // do servidor no momento da chamada (não confia em horário do dispositivo).
+//
+// Na "chegada" especificamente, também tenta capturar a posição real do
+// veículo na Point Track (pela placa) e grava junto — é o GPS de campo que
+// depois alimenta a correção do cadastro de endereço do cliente no WiBi.
+// Isso é best-effort: se a Point Track falhar ou o veículo não tiver
+// correspondência, a marcação de chegada acontece do mesmo jeito, só sem
+// o GPS.
 router.patch('/:id/status', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const { status, problemaDescricao } = req.body;
@@ -36,6 +44,28 @@ router.patch('/:id/status', async (req, res) => {
     if (status === 'problema') {
         sets.push(`problema_descricao = $${valores.length + 1}`);
         valores.push(problemaDescricao);
+    }
+
+    if (status === 'chegada') {
+        try {
+            const cargaResult = await pool.query(
+                `SELECT c.veiculo_placa
+                 FROM paradas p
+                 JOIN cargas c ON c.id = p.carga_id
+                 WHERE p.id = $1`,
+                [id]
+            );
+            const placa = cargaResult.rows[0]?.veiculo_placa;
+            if (placa) {
+                const posicao = await obterPosicaoPorPlaca(placa);
+                if (posicao) {
+                    sets.push(`chegada_lat = $${valores.length + 1}`, `chegada_lng = $${valores.length + 2}`);
+                    valores.push(posicao.latitude, posicao.longitude);
+                }
+            }
+        } catch (err) {
+            console.error('Falha ao capturar posição da Point Track na chegada:', err);
+        }
     }
 
     valores.push(id);
