@@ -27,6 +27,7 @@ export default function DashboardRotaDetalhe() {
     const [posicao, setPosicao] = useState(null);
     const [motoristas, setMotoristas] = useState([]);
     const [reatribuindo, setReatribuindo] = useState(false);
+    const [sincronizando, setSincronizando] = useState(false);
 
     useEffect(() => {
         api.dashboardRotaDetalhe(id).then(setRota);
@@ -42,6 +43,19 @@ export default function DashboardRotaDetalhe() {
             setRota(detalhe);
         } finally {
             setReatribuindo(false);
+        }
+    }
+
+    async function handleSincronizarVeiculo() {
+        setSincronizando(true);
+        try {
+            await api.sincronizarVeiculo(id);
+            const detalhe = await api.dashboardRotaDetalhe(id);
+            setRota(detalhe);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setSincronizando(false);
         }
     }
 
@@ -67,7 +81,17 @@ export default function DashboardRotaDetalhe() {
 
             <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
                 <h1 className="text-xl font-bold">Carga #{rota.wibi_ca_id}</h1>
-                <p className="text-gray-600">Veículo: {rota.veiculo_placa || '—'}</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-gray-600">Veículo: {rota.veiculo_placa || '—'}</p>
+                    <button
+                        onClick={handleSincronizarVeiculo}
+                        disabled={sincronizando}
+                        className="text-xs text-blue-600 underline disabled:opacity-50"
+                        title="Busca o veículo atualizado direto do WiBi"
+                    >
+                        {sincronizando ? 'sincronizando...' : 'sincronizar com o WiBi'}
+                    </button>
+                </div>
                 <p className="text-gray-600">Status: {rota.status}</p>
                 {rota.distancia_total_km && (
                     <p className="text-gray-600">~{Number(rota.distancia_total_km).toFixed(0)} km (ida e volta, estimado)</p>

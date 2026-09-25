@@ -41,5 +41,7 @@ export const api = {
     exportarRotaUrl: (id) => `${API_BASE_URL}/dashboard/rotas/${id}/exportar`,
     listarMotoristas: () => request('/dashboard/motoristas', { auth: false }),
     reatribuirMotorista: (id, motoristaId) =>
-        request(`/dashboard/rotas/${id}/motorista`, { method: 'PATCH', body: { motoristaId }, auth: false })
+        request(`/dashboard/rotas/${id}/motorista`, { method: 'PATCH', body: { motoristaId }, auth: false }),
+    sincronizarVeiculo: (id) =>
+        request(`/dashboard/rotas/${id}/sincronizar-veiculo`, { method: 'PATCH', auth: false })
 };

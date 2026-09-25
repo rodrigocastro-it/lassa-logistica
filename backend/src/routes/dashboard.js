@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pg');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { montarOuObterRota } = require('../services/montarRotaService');
+const { getCargaByNumero } = require('../services/wibiCargaService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
 
 const router = express.Router();
@@ -108,6 +109,33 @@ router.patch('/rotas/:id/motorista', async (req, res) => {
         return res.status(404).json({ erro: 'Rota não encontrada.' });
     }
     res.json(result.rows[0]);
+});
+
+// Re-consulta o WiBi e atualiza o veículo salvo localmente. O veículo é
+// copiado do WiBi só no momento em que a carga é montada/carregada — se
+// alguém trocar o veículo no WiBi depois, este sistema não sabe sozinho,
+// então esse endpoint existe pra sincronizar sob demanda.
+router.patch('/rotas/:id/sincronizar-veiculo', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const cargaResult = await pool.query('SELECT wibi_ca_id FROM cargas WHERE id = $1', [id]);
+    if (cargaResult.rows.length === 0) {
+        return res.status(404).json({ erro: 'Rota não encontrada.' });
+    }
+
+    try {
+        const cargaWibi = await getCargaByNumero(cargaResult.rows[0].wibi_ca_id);
+        if (!cargaWibi) {
+            return res.status(404).json({ erro: 'Carga não encontrada mais no WiBi.' });
+        }
+        const result = await pool.query(
+            `UPDATE cargas SET veiculo_placa = $1, atualizado_em = now() WHERE id = $2 RETURNING *`,
+            [cargaWibi.veiculo?.placa || null, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Erro ao sincronizar veículo com o WiBi:', err);
+        res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
+    }
 });
 
 router.get('/rotas/:id/posicao', async (req, res) => {
