@@ -41,13 +41,29 @@ async function login() {
         throw new Error(`Falha no login da Point Track: ${data.ret_msg}`);
     }
 
+    // Duas ou mais entradas podem ter a mesma placa na Point Track (ex.: o
+    // caminhão em si e um acessório/baú cadastrado à parte, sem rastreador
+    // físico vinculado). Nesses casos, só o "rastreado" com tracker ativo
+    // (vinculado_rastreador) deve ganhar — senão a gente pode acabar
+    // consultando posição de um item sem GPS de verdade, travado numa
+    // posição antiga.
     const placaParaRastreadoId = new Map();
     for (const item of data.rastreados || []) {
         const r = item.Rastreado;
         const placa = r?.veiculo?.placa;
-        if (placa) {
-            placaParaRastreadoId.set(placa.replace(/[^A-Z0-9]/gi, '').toUpperCase(), r.id);
+        if (!placa) continue;
+
+        const chave = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+        const temRastreadorAtivo = r.vinculado_rastreador === '1' && !!r.rastreador_id;
+        const existente = placaParaRastreadoId.get(chave);
+
+        if (existente && !temRastreadorAtivo && existente.temRastreadorAtivo) {
+            continue; // já tem uma entrada melhor (com rastreador) pra essa placa
         }
+        if (existente) {
+            console.warn(`Point Track: placa duplicada "${placa}" (rastreados ${existente.id} e ${r.id}).`);
+        }
+        placaParaRastreadoId.set(chave, { id: r.id, temRastreadorAtivo });
     }
 
     cache = {
@@ -65,7 +81,8 @@ async function garantirLogin() {
 
 function rastreadoIdPorPlaca(placa) {
     if (!placa) return null;
-    return cache.placaParaRastreadoId.get(placa.replace(/[^A-Z0-9]/gi, '').toUpperCase()) || null;
+    const entrada = cache.placaParaRastreadoId.get(placa.replace(/[^A-Z0-9]/gi, '').toUpperCase());
+    return entrada ? entrada.id : null;
 }
 
 /**
