@@ -59,7 +59,7 @@ async function getCargaByNumero(caId) {
             vdCodigo: row.vd_codigo,
             clCodigo: row.cl_codigo,
             vdStatus: row.vd_status,
-            clienteNome: row.en_nome_completo || row.en_nome_abreviado || null,
+            clienteNome: row.en_nome_abreviado || row.en_nome_completo || null,
             telefone: row.en_fone_1 || row.en_fone_2 || row.en_fone_3 || null,
             endereco: row.ed_endereco_completo
                 || [row.ed_logradouro, row.ed_numero, row.ed_complemento].filter(Boolean).join(', ') || null,
