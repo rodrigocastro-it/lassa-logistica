@@ -26,7 +26,7 @@ export default function App() {
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/rota" element={<RotaPrivada><RotaDoDia /></RotaPrivada>} />
-                    <Route path="/cliente/:cargaId/:paradaId" element={<RotaPrivada><DetalheCliente /></RotaPrivada>} />
+                    <Route path="/cliente/:cargaId/:clCodigo" element={<RotaPrivada><DetalheCliente /></RotaPrivada>} />
                     <Route path="/paradas" element={<RotaPrivada><Paradas /></RotaPrivada>} />
                     <Route path="/mapa" element={<RotaPrivada><Mapa /></RotaPrivada>} />
 

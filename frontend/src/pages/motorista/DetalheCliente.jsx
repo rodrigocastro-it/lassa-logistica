@@ -1,46 +1,71 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../services/api';
+import { statusDoGrupo } from '../../utils/agruparParadas';
 
 export default function DetalheCliente() {
-    const { cargaId, paradaId } = useParams();
-    const [parada, setParada] = useState(null);
+    const { cargaId, clCodigo } = useParams();
+    const [notas, setNotas] = useState(null);
     const [mostrarProblema, setMostrarProblema] = useState(false);
     const [descricaoProblema, setDescricaoProblema] = useState('');
     const [erro, setErro] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
-        api.obterCarga(cargaId).then((carga) => {
-            const p = carga.paradas.find((x) => String(x.id) === paradaId);
-            setParada(p || null);
-        });
-    }, [cargaId, paradaId]);
+        carregar();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cargaId, clCodigo]);
+
+    async function carregar() {
+        const carga = await api.obterCarga(cargaId);
+        const doCliente = carga.paradas.filter((p) => String(p.wibi_cl_codigo) === clCodigo);
+        setNotas(doCliente);
+    }
 
     async function marcar(status, problemaDescricao) {
         setErro('');
         try {
-            const atualizada = await api.atualizarStatusParada(paradaId, status, problemaDescricao);
-            setParada(atualizada);
+            await api.atualizarStatusGrupo(notas.map((n) => n.id), status, problemaDescricao);
+            await carregar();
             setMostrarProblema(false);
         } catch (err) {
             setErro(err.message);
         }
     }
 
-    if (!parada) {
+    if (!notas || notas.length === 0) {
         return <p className="p-6 text-center text-gray-500">Carregando...</p>;
     }
+
+    const principal = notas[0];
+    const status = statusDoGrupo(notas);
 
     return (
         <div className="min-h-screen p-4 space-y-4">
             <button onClick={() => navigate(-1)} className="text-blue-700 text-sm">← Voltar</button>
 
             <div className="bg-white rounded-xl shadow-sm p-4 space-y-1">
-                <h1 className="text-lg font-bold">{parada.cliente_nome || `Venda ${parada.wibi_vd_codigo}`}</h1>
-                <p className="text-sm text-gray-600">{parada.cliente_endereco || 'Endereço não disponível'}</p>
-                <p className="text-sm text-gray-600">{parada.cliente_telefone || 'Telefone não disponível'}</p>
+                <h1 className="text-lg font-bold">{principal.cliente_nome || `Venda ${principal.wibi_vd_codigo}`}</h1>
+                <p className="text-sm text-gray-600">{principal.cliente_endereco || 'Endereço não disponível'}</p>
+                <p className="text-sm text-gray-600">{principal.cliente_telefone || 'Telefone não disponível'}</p>
             </div>
+
+            {notas.length > 1 && (
+                <div className="bg-white rounded-xl shadow-sm p-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-2">{notas.length} notas deste cliente:</p>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                        {notas.map((n) => (
+                            <li key={n.id} className="flex justify-between">
+                                <span>Venda {n.wibi_vd_codigo}</span>
+                                <span className="text-gray-400">{n.status}</span>
+                            </li>
+                        ))}
+                    </ul>
+                    <p className="text-xs text-gray-400 mt-2">
+                        Os botões abaixo marcam o status de todas as notas deste cliente de uma vez.
+                    </p>
+                </div>
+            )}
 
             {erro && <p className="text-red-600 text-sm">{erro}</p>}
 
@@ -92,11 +117,13 @@ export default function DetalheCliente() {
             )}
 
             <div className="bg-white rounded-xl shadow-sm p-4 text-sm text-gray-600 space-y-1">
-                <p>Status atual: <strong>{parada.status}</strong></p>
-                {parada.chegada_em && <p>Chegada: {new Date(parada.chegada_em).toLocaleString('pt-BR')}</p>}
-                {parada.inicio_em && <p>Início: {new Date(parada.inicio_em).toLocaleString('pt-BR')}</p>}
-                {parada.fim_em && <p>Fim: {new Date(parada.fim_em).toLocaleString('pt-BR')}</p>}
-                {parada.problema_descricao && <p>Problema: {parada.problema_descricao}</p>}
+                <p>Status atual: <strong>{status}</strong></p>
+                {principal.chegada_em && <p>Chegada: {new Date(principal.chegada_em).toLocaleString('pt-BR')}</p>}
+                {principal.inicio_em && <p>Início: {new Date(principal.inicio_em).toLocaleString('pt-BR')}</p>}
+                {principal.fim_em && <p>Fim: {new Date(principal.fim_em).toLocaleString('pt-BR')}</p>}
+                {notas.some((n) => n.problema_descricao) && (
+                    <p>Problema: {notas.find((n) => n.problema_descricao).problema_descricao}</p>
+                )}
             </div>
         </div>
     );

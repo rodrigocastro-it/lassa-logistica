@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useCargaAtual } from '../../context/CargaAtualContext';
+import { agruparParadasPorCliente } from '../../utils/agruparParadas';
 import MenuMotorista from './MenuMotorista';
 
 const STATUS_COR = {
@@ -91,12 +92,14 @@ export default function RotaDoDia() {
         );
     }
 
+    const grupos = agruparParadasPorCliente(carga.paradas).sort((a, b) => a.sequencia - b.sequencia);
+
     return (
         <div className="min-h-screen pb-20">
             <header className="bg-blue-700 text-white p-4 rounded-b-2xl flex items-start justify-between">
                 <div>
                     <p className="text-sm opacity-80">Carga #{carga.wibi_ca_id}</p>
-                    <h1 className="text-xl font-bold">{carga.paradas.length} paradas</h1>
+                    <h1 className="text-xl font-bold">{grupos.length} paradas ({carga.paradas.length} notas)</h1>
                     <p className="text-sm opacity-90">Veículo: {carga.veiculo_placa || '—'}</p>
                     {carga.distancia_total_km && (
                         <p className="text-sm opacity-90">~{Number(carga.distancia_total_km).toFixed(0)} km (ida e volta)</p>
@@ -108,18 +111,25 @@ export default function RotaDoDia() {
             </header>
 
             <ul className="p-4 space-y-3">
-                {carga.paradas.map((p) => (
-                    <li key={p.id}>
+                {grupos.map((g) => (
+                    <li key={g.clCodigo}>
                         <Link
-                            to={`/cliente/${carga.id}/${p.id}`}
+                            to={`/cliente/${carga.id}/${g.clCodigo}`}
                             className="block bg-white rounded-xl shadow-sm p-4 flex items-center justify-between"
                         >
                             <div>
-                                <p className="font-semibold">{p.sequencia}. {p.cliente_nome || `Venda ${p.wibi_vd_codigo}`}</p>
-                                <p className="text-sm text-gray-500">{p.cliente_endereco || 'Endereço não disponível'}</p>
+                                <p className="font-semibold">
+                                    {g.sequencia}. {g.paradas[0].cliente_nome || `Venda ${g.paradas[0].wibi_vd_codigo}`}
+                                    {g.paradas.length > 1 && (
+                                        <span className="ml-2 text-xs font-normal text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                                            {g.paradas.length} notas
+                                        </span>
+                                    )}
+                                </p>
+                                <p className="text-sm text-gray-500">{g.paradas[0].cliente_endereco || 'Endereço não disponível'}</p>
                             </div>
-                            <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COR[p.status]}`}>
-                                {p.status}
+                            <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COR[g.status]}`}>
+                                {g.status}
                             </span>
                         </Link>
                     </li>

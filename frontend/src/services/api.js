@@ -29,6 +29,8 @@ export const api = {
     finalizarCarga: (id) => request(`/cargas/${id}/finalizar`, { method: 'PATCH' }),
     atualizarStatusParada: (id, status, problemaDescricao) =>
         request(`/paradas/${id}/status`, { method: 'PATCH', body: { status, problemaDescricao } }),
+    atualizarStatusGrupo: (paradaIds, status, problemaDescricao) =>
+        request('/paradas/grupo/status', { method: 'PATCH', body: { paradaIds, status, problemaDescricao } }),
     listarParadasManuais: (cargaId) => request(`/paradas/manuais/carga/${cargaId}`),
     criarParadaManual: (cargaId, tipo, observacao) =>
         request('/paradas/manuais', { method: 'POST', body: { cargaId, tipo, observacao } }),
