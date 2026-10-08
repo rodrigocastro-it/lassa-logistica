@@ -59,38 +59,17 @@ function validarStatus(status, problemaDescricao, res) {
     return true;
 }
 
-// Marca chegada / início / fim / problema de uma única parada. Cada
-// marcação grava a data/hora do servidor no momento da chamada (não confia
-// em horário do dispositivo).
-router.patch('/:id/status', asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id, 10);
-    const { status, problemaDescricao } = req.body;
-    if (!validarStatus(status, problemaDescricao, res)) return;
-
-    const dono = await pool.query(
-        `SELECT c.veiculo_placa
-         FROM paradas p
-         JOIN cargas c ON c.id = p.carga_id
-         WHERE p.id = $1 AND c.motorista_id = $2`,
-        [id, req.motorista.id]
-    );
-    if (dono.rows.length === 0) {
-        return res.status(404).json({ erro: 'Parada não encontrada.' });
-    }
-
-    const { sets, valores } = await montarAtualizacaoStatus(status, problemaDescricao, dono.rows[0].veiculo_placa);
-    valores.push(id);
-    const result = await pool.query(
-        `UPDATE paradas SET ${sets.join(', ')} WHERE id = $${valores.length} RETURNING *`,
-        valores
-    );
-    res.json(result.rows[0]);
-}));
-
 // Marca chegada / início / fim / problema pra um GRUPO de paradas de uma
 // vez — usado quando o mesmo cliente tem mais de uma nota na carga: o
 // motorista chega/sai uma vez só fisicamente, então todas as notas daquele
 // cliente mudam de status juntas.
+//
+// Precisa vir ANTES de "/:id/status" abaixo: as duas rotas têm o mesmo
+// formato de caminho (dois segmentos terminando em "status"), e o Express
+// casa na ordem em que as rotas foram registradas — se "/:id/status"
+// viesse primeiro, ele capturaria também "/grupo/status", tratando a
+// palavra "grupo" como se fosse um id numérico (e quebrando com erro de
+// tipo no Postgres).
 router.patch('/grupo/status', asyncHandler(async (req, res) => {
     const { paradaIds, status, problemaDescricao } = req.body;
     if (!Array.isArray(paradaIds) || paradaIds.length === 0) {
@@ -117,6 +96,34 @@ router.patch('/grupo/status', asyncHandler(async (req, res) => {
         valores
     );
     res.json(result.rows);
+}));
+
+// Marca chegada / início / fim / problema de uma única parada. Cada
+// marcação grava a data/hora do servidor no momento da chamada (não confia
+// em horário do dispositivo).
+router.patch('/:id/status', asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { status, problemaDescricao } = req.body;
+    if (!validarStatus(status, problemaDescricao, res)) return;
+
+    const dono = await pool.query(
+        `SELECT c.veiculo_placa
+         FROM paradas p
+         JOIN cargas c ON c.id = p.carga_id
+         WHERE p.id = $1 AND c.motorista_id = $2`,
+        [id, req.motorista.id]
+    );
+    if (dono.rows.length === 0) {
+        return res.status(404).json({ erro: 'Parada não encontrada.' });
+    }
+
+    const { sets, valores } = await montarAtualizacaoStatus(status, problemaDescricao, dono.rows[0].veiculo_placa);
+    valores.push(id);
+    const result = await pool.query(
+        `UPDATE paradas SET ${sets.join(', ')} WHERE id = $${valores.length} RETURNING *`,
+        valores
+    );
+    res.json(result.rows[0]);
 }));
 
 // Paradas manuais (almoço, abastecimento etc.)
