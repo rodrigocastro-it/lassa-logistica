@@ -2,10 +2,11 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db/pg');
+const { asyncHandler } = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
+router.post('/login', asyncHandler(async (req, res) => {
     const { usuario, senha } = req.body;
     if (!usuario || !senha) {
         return res.status(400).json({ erro: 'Informe usuário e senha.' });
@@ -33,6 +34,6 @@ router.post('/login', async (req, res) => {
     );
 
     res.json({ token, motorista: { id: motorista.id, nome: motorista.nome, usuario: motorista.usuario } });
-});
+}));
 
 module.exports = router;

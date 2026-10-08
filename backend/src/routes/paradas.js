@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pg');
 const { autenticar } = require('../middleware/auth');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
+const { asyncHandler } = require('../middleware/asyncHandler');
 
 const router = express.Router();
 router.use(autenticar);
@@ -61,7 +62,7 @@ function validarStatus(status, problemaDescricao, res) {
 // Marca chegada / início / fim / problema de uma única parada. Cada
 // marcação grava a data/hora do servidor no momento da chamada (não confia
 // em horário do dispositivo).
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const { status, problemaDescricao } = req.body;
     if (!validarStatus(status, problemaDescricao, res)) return;
@@ -84,13 +85,13 @@ router.patch('/:id/status', async (req, res) => {
         valores
     );
     res.json(result.rows[0]);
-});
+}));
 
 // Marca chegada / início / fim / problema pra um GRUPO de paradas de uma
 // vez — usado quando o mesmo cliente tem mais de uma nota na carga: o
 // motorista chega/sai uma vez só fisicamente, então todas as notas daquele
 // cliente mudam de status juntas.
-router.patch('/grupo/status', async (req, res) => {
+router.patch('/grupo/status', asyncHandler(async (req, res) => {
     const { paradaIds, status, problemaDescricao } = req.body;
     if (!Array.isArray(paradaIds) || paradaIds.length === 0) {
         return res.status(400).json({ erro: 'Informe paradaIds (lista de ids).' });
@@ -116,10 +117,10 @@ router.patch('/grupo/status', async (req, res) => {
         valores
     );
     res.json(result.rows);
-});
+}));
 
 // Paradas manuais (almoço, abastecimento etc.)
-router.post('/manuais', async (req, res) => {
+router.post('/manuais', asyncHandler(async (req, res) => {
     const { cargaId, tipo, observacao } = req.body;
     if (!cargaId || !tipo) {
         return res.status(400).json({ erro: 'Informe cargaId e tipo.' });
@@ -129,9 +130,9 @@ router.post('/manuais', async (req, res) => {
         [cargaId, tipo, observacao || null]
     );
     res.status(201).json(result.rows[0]);
-});
+}));
 
-router.patch('/manuais/:id/encerrar', async (req, res) => {
+router.patch('/manuais/:id/encerrar', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const result = await pool.query(
         `UPDATE paradas_manuais SET fim_em = now() WHERE id = $1 RETURNING *`,
@@ -141,15 +142,15 @@ router.patch('/manuais/:id/encerrar', async (req, res) => {
         return res.status(404).json({ erro: 'Parada manual não encontrada.' });
     }
     res.json(result.rows[0]);
-});
+}));
 
-router.get('/manuais/carga/:cargaId', async (req, res) => {
+router.get('/manuais/carga/:cargaId', asyncHandler(async (req, res) => {
     const cargaId = parseInt(req.params.cargaId, 10);
     const result = await pool.query(
         `SELECT * FROM paradas_manuais WHERE carga_id = $1 ORDER BY inicio_em`,
         [cargaId]
     );
     res.json(result.rows);
-});
+}));
 
 module.exports = router;

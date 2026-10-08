@@ -4,6 +4,7 @@ const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { montarOuObterRota } = require('../services/montarRotaService');
 const { getCargaByNumero } = require('../services/wibiCargaService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
+const { asyncHandler } = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const router = express.Router();
 // A torre de controle monta a rota (puxa do WiBi + otimiza + salva) sem
 // precisar de um motorista logado — ele "assume" a rota depois, digitando
 // o mesmo número da carga no app dele (ver montarRotaService).
-router.post('/rotas/montar', async (req, res) => {
+router.post('/rotas/montar', asyncHandler(async (req, res) => {
     const caId = parseInt(req.body.caId, 10);
     if (!Number.isInteger(caId)) {
         return res.status(400).json({ erro: 'Número de carga inválido.' });
@@ -30,16 +31,16 @@ router.post('/rotas/montar', async (req, res) => {
         console.error('Erro ao montar rota:', err);
         res.status(500).json({ erro: 'Falha ao montar a rota.' });
     }
-});
+}));
 
-router.get('/motoristas', async (req, res) => {
+router.get('/motoristas', asyncHandler(async (req, res) => {
     const result = await pool.query(
         'SELECT id, nome, usuario FROM motoristas WHERE ativo ORDER BY nome'
     );
     res.json(result.rows);
-});
+}));
 
-router.get('/rotas', async (req, res) => {
+router.get('/rotas', asyncHandler(async (req, res) => {
     const { data } = req.query; // YYYY-MM-DD opcional
 
     const params = [];
@@ -64,9 +65,9 @@ router.get('/rotas', async (req, res) => {
         params
     );
     res.json(result.rows);
-});
+}));
 
-router.get('/rotas/:id', async (req, res) => {
+router.get('/rotas/:id', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const cargaResult = await pool.query(
         `SELECT c.*, m.nome AS motorista_nome, m.usuario AS motorista_usuario
@@ -91,13 +92,13 @@ router.get('/rotas/:id', async (req, res) => {
         paradas: paradasResult.rows,
         paradasManuais: paradasManuaisResult.rows
     });
-});
+}));
 
 // Reatribui (ou remove) o motorista responsável por uma carga já carregada
 // — útil pra troca de motorista de última hora, ou pra corrigir um teste.
 // motoristaId null libera a carga (sem motorista, como se tivesse sido
 // montada pela torre de controle e ainda não assumida por ninguém).
-router.patch('/rotas/:id/motorista', async (req, res) => {
+router.patch('/rotas/:id/motorista', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const motoristaId = req.body.motoristaId != null ? parseInt(req.body.motoristaId, 10) : null;
 
@@ -109,13 +110,13 @@ router.patch('/rotas/:id/motorista', async (req, res) => {
         return res.status(404).json({ erro: 'Rota não encontrada.' });
     }
     res.json(result.rows[0]);
-});
+}));
 
 // Re-consulta o WiBi e atualiza o veículo salvo localmente. O veículo é
 // copiado do WiBi só no momento em que a carga é montada/carregada — se
 // alguém trocar o veículo no WiBi depois, este sistema não sabe sozinho,
 // então esse endpoint existe pra sincronizar sob demanda.
-router.patch('/rotas/:id/sincronizar-veiculo', async (req, res) => {
+router.patch('/rotas/:id/sincronizar-veiculo', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const cargaResult = await pool.query('SELECT wibi_ca_id FROM cargas WHERE id = $1', [id]);
     if (cargaResult.rows.length === 0) {
@@ -136,9 +137,9 @@ router.patch('/rotas/:id/sincronizar-veiculo', async (req, res) => {
         console.error('Erro ao sincronizar veículo com o WiBi:', err);
         res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
     }
-});
+}));
 
-router.get('/rotas/:id/posicao', async (req, res) => {
+router.get('/rotas/:id/posicao', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const cargaResult = await pool.query('SELECT veiculo_placa FROM cargas WHERE id = $1', [id]);
     if (cargaResult.rows.length === 0) {
@@ -159,10 +160,10 @@ router.get('/rotas/:id/posicao', async (req, res) => {
         console.error('Erro ao consultar Point Track:', err);
         res.status(502).json({ erro: 'Falha ao consultar a Point Track.' });
     }
-});
+}));
 
 // Exporta a rota otimizada em CSV (abre direto no Excel/Google Sheets).
-router.get('/rotas/:id/exportar', async (req, res) => {
+router.get('/rotas/:id/exportar', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const cargaResult = await pool.query('SELECT * FROM cargas WHERE id = $1', [id]);
     if (cargaResult.rows.length === 0) {
@@ -206,6 +207,6 @@ router.get('/rotas/:id/exportar', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="rota-carga-${carga.wibi_ca_id}.csv"`);
     // BOM no início pra o Excel reconhecer UTF-8 certinho (acentos não quebram).
     res.send(`﻿${linhas.join('\n')}`);
-});
+}));
 
 module.exports = router;

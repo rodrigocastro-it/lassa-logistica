@@ -1,11 +1,12 @@
 const express = require('express');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { autenticar } = require('../middleware/auth');
+const { asyncHandler } = require('../middleware/asyncHandler');
 
 const router = express.Router();
 router.use(autenticar);
 
-router.get('/posicao/:placa', async (req, res) => {
+router.get('/posicao/:placa', asyncHandler(async (req, res) => {
     try {
         const posicao = await obterPosicaoPorPlaca(req.params.placa);
         if (!posicao) {
@@ -16,6 +17,6 @@ router.get('/posicao/:placa', async (req, res) => {
         console.error('Erro ao consultar Point Track:', err);
         res.status(502).json({ erro: 'Falha ao consultar a Point Track.' });
     }
-});
+}));
 
 module.exports = router;

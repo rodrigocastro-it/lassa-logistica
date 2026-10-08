@@ -3,13 +3,14 @@ const { pool } = require('../db/pg');
 const { getCargaByNumero } = require('../services/wibiCargaService');
 const { montarOuObterRota } = require('../services/montarRotaService');
 const { autenticar } = require('../middleware/auth');
+const { asyncHandler } = require('../middleware/asyncHandler');
 
 const router = express.Router();
 router.use(autenticar);
 
 // Consulta a carga no WiBi sem gravar nada — usado pra pré-visualizar antes
 // de "carregar" a rota de fato.
-router.get('/wibi/:caId', async (req, res) => {
+router.get('/wibi/:caId', asyncHandler(async (req, res) => {
     const caId = parseInt(req.params.caId, 10);
     if (!Number.isInteger(caId)) {
         return res.status(400).json({ erro: 'Número de carga inválido.' });
@@ -25,13 +26,13 @@ router.get('/wibi/:caId', async (req, res) => {
         console.error('Erro ao consultar carga no WiBi:', err);
         res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
     }
-});
+}));
 
 // Carrega a carga do WiBi, otimiza a sequência de paradas e grava localmente
 // vinculada ao motorista logado. Idempotente: se a carga já foi carregada
 // antes (inclusive montada pela torre de controle sem motorista ainda),
 // apenas retorna o estado atual e assume a rota pra esse motorista.
-router.post('/carregar', async (req, res) => {
+router.post('/carregar', asyncHandler(async (req, res) => {
     const caId = parseInt(req.body.caId, 10);
     if (!Number.isInteger(caId)) {
         return res.status(400).json({ erro: 'Número de carga inválido.' });
@@ -47,12 +48,12 @@ router.post('/carregar', async (req, res) => {
         console.error('Erro ao carregar carga:', err);
         res.status(500).json({ erro: 'Falha ao carregar a carga.' });
     }
-});
+}));
 
 // Só retorna a carga se ela for do motorista logado — sem isso, qualquer
 // motorista autenticado conseguiria ver os dados de uma carga de outro
 // (bastava adivinhar/ter o id).
-router.get('/:id', async (req, res) => {
+router.get('/:id', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const cargaResult = await pool.query(
         'SELECT * FROM cargas WHERE id = $1 AND motorista_id = $2',
@@ -66,12 +67,12 @@ router.get('/:id', async (req, res) => {
         [id]
     );
     res.json({ ...cargaResult.rows[0], paradas: paradasResult.rows });
-});
+}));
 
 // Encerra a carga atual (libera o motorista pra carregar outra em /rota).
 // Não exige que todas as paradas estejam concluídas — o motorista pode
 // precisar encerrar mesmo com pendências/problemas registrados.
-router.patch('/:id/finalizar', async (req, res) => {
+router.patch('/:id/finalizar', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const result = await pool.query(
         `UPDATE cargas SET status = 'finalizada', atualizado_em = now()
@@ -83,9 +84,9 @@ router.patch('/:id/finalizar', async (req, res) => {
         return res.status(404).json({ erro: 'Carga não encontrada.' });
     }
     res.json(result.rows[0]);
-});
+}));
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
     const result = await pool.query(
         `SELECT c.*, m.nome AS motorista_nome
          FROM cargas c
@@ -96,6 +97,6 @@ router.get('/', async (req, res) => {
         [req.motorista.id]
     );
     res.json(result.rows);
-});
+}));
 
 module.exports = router;
