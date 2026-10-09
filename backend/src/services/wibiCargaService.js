@@ -94,4 +94,40 @@ async function getCargaByNumero(caId) {
     };
 }
 
-module.exports = { getCargaByNumero };
+/**
+ * Lista as cargas "em aberto" no WiBi até uma data (ca_status = 'A' e
+ * ca_data_entrega <= data). Confirmado com a Nina (torre de controle) em
+ * 2026-10-09: status 'A' = aberta/ainda não despachada, 'P' = em rota
+ * sendo entregue, 'F' = finalizada. Carga aberta pode ficar de um dia
+ * anterior (ex: faltou mercadoria) — por isso o filtro é "<=" e não "=".
+ *
+ * Só leitura — não cria nada local, é só pra listar o que existe no WiBi.
+ */
+async function listarCargasAbertas(dataLimite) {
+    const pool = await getWibiPool();
+
+    const result = await pool.request()
+        .input('dataLimite', sql.Date, dataLimite)
+        .query(`
+            SELECT ca.ca_id, ca.ca_data_entrega, ca.ca_peso, ca.ve_codigo,
+                   pm.pm_placa, pm.pm_descricao,
+                   (SELECT COUNT(*) FROM dbo.t_carga_vendas cv WHERE cv.ca_id = ca.ca_id) AS total_notas
+            FROM dbo.t_carga ca
+            LEFT JOIN dbo.t_veiculos v ON v.ve_codigo = ca.ve_codigo
+            LEFT JOIN dbo.t_patrimonio pm ON pm.pm_codigo = v.pm_codigo
+            WHERE ca.ca_status = 'A' AND ca.ca_data_entrega <= @dataLimite
+            ORDER BY ca.ca_data_entrega, ca.ca_id
+        `);
+
+    return result.recordset.map((row) => ({
+        caId: row.ca_id,
+        dataEntrega: row.ca_data_entrega,
+        peso: row.ca_peso,
+        totalNotas: row.total_notas,
+        veiculo: row.pm_placa
+            ? { placa: row.pm_placa, descricao: row.pm_descricao }
+            : null
+    }));
+}
+
+module.exports = { getCargaByNumero, listarCargasAbertas };

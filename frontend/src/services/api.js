@@ -40,6 +40,7 @@ export const api = {
     dashboardRotaPosicao: (id) => request(`/dashboard/rotas/${id}/posicao`),
     posicaoVeiculo: (placa) => request(`/pointtrack/posicao/${placa}`),
     montarRota: (caId) => request('/dashboard/rotas/montar', { method: 'POST', body: { caId }, auth: false }),
+    cargasWibiAbertas: (data) => request(`/dashboard/cargas-wibi${data ? `?data=${data}` : ''}`, { auth: false }),
     exportarRotaUrl: (id) => `${API_BASE_URL}/dashboard/rotas/${id}/exportar`,
     listarMotoristas: () => request('/dashboard/motoristas', { auth: false }),
     reatribuirMotorista: (id, motoristaId) =>

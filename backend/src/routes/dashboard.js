@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pg');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { montarOuObterRota } = require('../services/montarRotaService');
-const { getCargaByNumero } = require('../services/wibiCargaService');
+const { getCargaByNumero, listarCargasAbertas } = require('../services/wibiCargaService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
 const { asyncHandler } = require('../middleware/asyncHandler');
 
@@ -30,6 +30,39 @@ router.post('/rotas/montar', asyncHandler(async (req, res) => {
     } catch (err) {
         console.error('Erro ao montar rota:', err);
         res.status(500).json({ erro: 'Falha ao montar a rota.' });
+    }
+}));
+
+// Lista as cargas em aberto no WiBi (ainda não processadas, prontas pra
+// montar rota), até a data informada (padrão: hoje). Substitui o fluxo de
+// digitar número de carga um por um — a torre de controle só olha a lista
+// e manda montar as que quiser. Cruza com o que já existe localmente pra
+// marcar o que já foi montado (e não deixar montar duas vezes à toa).
+router.get('/cargas-wibi', asyncHandler(async (req, res) => {
+    const dataLimite = req.query.data || new Date().toISOString().slice(0, 10);
+
+    try {
+        const cargasWibi = await listarCargasAbertas(dataLimite);
+        if (cargasWibi.length === 0) {
+            return res.json([]);
+        }
+
+        const idsWibi = cargasWibi.map((c) => c.caId);
+        const jaMontadas = await pool.query(
+            `SELECT wibi_ca_id, id, motorista_id FROM cargas WHERE wibi_ca_id = ANY($1)`,
+            [idsWibi]
+        );
+        const montadasPorId = new Map(jaMontadas.rows.map((r) => [r.wibi_ca_id, r]));
+
+        res.json(cargasWibi.map((c) => ({
+            ...c,
+            jaMontada: montadasPorId.has(c.caId),
+            localId: montadasPorId.get(c.caId)?.id || null,
+            temMotorista: !!montadasPorId.get(c.caId)?.motorista_id
+        })));
+    } catch (err) {
+        console.error('Erro ao listar cargas em aberto no WiBi:', err);
+        res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
     }
 }));
 
