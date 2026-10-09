@@ -12,10 +12,12 @@ function corStatus(rota) {
 
 export default function DashboardRotas() {
     const [rotas, setRotas] = useState([]);
+    const [emEntrega, setEmEntrega] = useState([]);
     const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
 
     useEffect(() => {
         api.dashboardRotas(data).then(setRotas);
+        api.cargasWibiEmEntrega(data).then(setEmEntrega);
     }, [data]);
 
     return (
@@ -33,6 +35,35 @@ export default function DashboardRotas() {
                         + Montar rota
                     </Link>
                 </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
+                <p className="font-semibold text-sm text-gray-700">Cargas em entrega hoje (direto do WiBi)</p>
+                {emEntrega.length === 0 && (
+                    <p className="text-sm text-gray-500">Nenhuma carga em entrega nessa data.</p>
+                )}
+                {emEntrega.map((c) => (
+                    <div key={c.caId} className="py-2 flex items-center justify-between gap-3 border-b last:border-0">
+                        <div>
+                            <p className="font-medium">
+                                Carga #{c.caId}
+                                <span className="text-sm text-gray-500 font-normal"> · {c.totalNotas} nota(s)</span>
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                {c.motoristaNome || 'motorista ainda não assumiu no sistema'}
+                                {c.veiculo && ` · Veículo ${c.veiculo.placa}`}
+                            </p>
+                        </div>
+                        {c.localId && (
+                            <Link
+                                to={`/dashboard/rotas/${c.localId}`}
+                                className="bg-gray-200 text-gray-700 rounded-lg px-4 py-2 text-sm whitespace-nowrap"
+                            >
+                                Ver detalhe
+                            </Link>
+                        )}
+                    </div>
+                ))}
             </div>
 
             <div className="grid gap-3">

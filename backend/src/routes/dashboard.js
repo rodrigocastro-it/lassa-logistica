@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pg');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { montarOuObterRota } = require('../services/montarRotaService');
-const { getCargaByNumero, listarCargasAbertas } = require('../services/wibiCargaService');
+const { getCargaByNumero, listarCargasAbertas, listarCargasEmEntrega } = require('../services/wibiCargaService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
 const { asyncHandler } = require('../middleware/asyncHandler');
 
@@ -62,6 +62,41 @@ router.get('/cargas-wibi', asyncHandler(async (req, res) => {
         })));
     } catch (err) {
         console.error('Erro ao listar cargas em aberto no WiBi:', err);
+        res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
+    }
+}));
+
+// Lista as cargas que já estão em entrega no WiBi (status P) hoje,
+// independente de terem sido carregadas no nosso sistema ou de ter
+// motorista logado nelas -- é só o que já tá rodando na rua, direto do
+// WiBi. Cruza com a tabela local só pra mostrar o nome do motorista
+// quando ele já tiver assumido a rota aqui dentro.
+router.get('/cargas-em-entrega', asyncHandler(async (req, res) => {
+    const dataLimite = req.query.data || new Date().toISOString().slice(0, 10);
+
+    try {
+        const cargasWibi = await listarCargasEmEntrega(dataLimite);
+        if (cargasWibi.length === 0) {
+            return res.json([]);
+        }
+
+        const idsWibi = cargasWibi.map((c) => c.caId);
+        const locais = await pool.query(
+            `SELECT c.wibi_ca_id, c.id, m.nome AS motorista_nome
+             FROM cargas c
+             LEFT JOIN motoristas m ON m.id = c.motorista_id
+             WHERE c.wibi_ca_id = ANY($1)`,
+            [idsWibi]
+        );
+        const locaisPorId = new Map(locais.rows.map((r) => [r.wibi_ca_id, r]));
+
+        res.json(cargasWibi.map((c) => ({
+            ...c,
+            localId: locaisPorId.get(c.caId)?.id || null,
+            motoristaNome: locaisPorId.get(c.caId)?.motorista_nome || null
+        })));
+    } catch (err) {
+        console.error('Erro ao listar cargas em entrega no WiBi:', err);
         res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
     }
 }));

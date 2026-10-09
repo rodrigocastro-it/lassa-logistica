@@ -130,4 +130,40 @@ async function listarCargasAbertas(dataLimite) {
     }));
 }
 
-module.exports = { getCargaByNumero, listarCargasAbertas };
+/**
+ * Lista as cargas "em entrega" no WiBi (ca_status = 'P', confirmado com a
+ * Nina em 2026-10-09 como "saiu, tá entregando"), com data de entrega até
+ * a data informada. Independe de a carga ter sido carregada ou não no
+ * nosso sistema -- é pra Nina ver o que tá rodando na rua sem precisar
+ * pedir pra Jacineuda ou abrir o WiBi.
+ *
+ * Só leitura -- não cria nada local.
+ */
+async function listarCargasEmEntrega(dataLimite) {
+    const pool = await getWibiPool();
+
+    const result = await pool.request()
+        .input('dataLimite', sql.Date, dataLimite)
+        .query(`
+            SELECT ca.ca_id, ca.ca_data_entrega, ca.ca_peso, ca.ve_codigo,
+                   pm.pm_placa, pm.pm_descricao,
+                   (SELECT COUNT(*) FROM dbo.t_carga_vendas cv WHERE cv.ca_id = ca.ca_id) AS total_notas
+            FROM dbo.t_carga ca
+            LEFT JOIN dbo.t_veiculos v ON v.ve_codigo = ca.ve_codigo
+            LEFT JOIN dbo.t_patrimonio pm ON pm.pm_codigo = v.pm_codigo
+            WHERE ca.ca_status = 'P' AND ca.ca_data_entrega <= @dataLimite
+            ORDER BY ca.ca_data_entrega, ca.ca_id
+        `);
+
+    return result.recordset.map((row) => ({
+        caId: row.ca_id,
+        dataEntrega: row.ca_data_entrega,
+        peso: row.ca_peso,
+        totalNotas: row.total_notas,
+        veiculo: row.pm_placa
+            ? { placa: row.pm_placa, descricao: row.pm_descricao }
+            : null
+    }));
+}
+
+module.exports = { getCargaByNumero, listarCargasAbertas, listarCargasEmEntrega };
