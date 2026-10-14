@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCargaAtual } from '../../context/CargaAtualContext';
+import LogoLassa from '../../components/LogoLassa';
 
 export default function Login() {
     const [usuario, setUsuario] = useState('');
@@ -30,33 +31,39 @@ export default function Login() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4">
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm space-y-4">
-                <img src="/logo-lassa.png" alt="Lassa" className="h-16 mx-auto" />
-                <h1 className="text-xl font-bold text-center text-lassa-azul">Lassa Logística</h1>
-                <p className="text-center text-sm text-gray-500">Acesso do motorista</p>
+        <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-lassa-leve/10 to-lassa-branco">
+            <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm space-y-5">
+                <div className="flex justify-center">
+                    <LogoLassa className="h-14" />
+                </div>
+                <div className="text-center space-y-1">
+                    <h1 className="text-lg font-semibold text-gray-800">Logística</h1>
+                    <p className="text-sm text-gray-500">Acesso do motorista</p>
+                </div>
 
-                <input
-                    className="w-full border rounded-lg px-3 py-2"
-                    placeholder="Usuário"
-                    value={usuario}
-                    onChange={(e) => setUsuario(e.target.value)}
-                    autoFocus
-                />
-                <input
-                    className="w-full border rounded-lg px-3 py-2"
-                    placeholder="Senha"
-                    type="password"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                />
+                <div className="space-y-3">
+                    <input
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
+                        placeholder="Usuário"
+                        value={usuario}
+                        onChange={(e) => setUsuario(e.target.value)}
+                        autoFocus
+                    />
+                    <input
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
+                        placeholder="Senha"
+                        type="password"
+                        value={senha}
+                        onChange={(e) => setSenha(e.target.value)}
+                    />
+                </div>
 
-                {erro && <p className="text-lassa-vermelho text-sm">{erro}</p>}
+                {erro && <p className="text-lassa-vermelho text-sm text-center">{erro}</p>}
 
                 <button
                     type="submit"
                     disabled={carregando}
-                    className="w-full bg-lassa-azul text-white rounded-lg py-2 font-medium disabled:opacity-50"
+                    className="w-full bg-lassa-azul hover:bg-lassa-profundo transition-colors text-white rounded-lg py-2.5 font-medium disabled:opacity-50"
                 >
                     {carregando ? 'Entrando...' : 'Entrar'}
                 </button>

@@ -71,7 +71,7 @@ export default function DashboardRotaDetalhe() {
     if (!rota) return <p className="p-6 text-center text-gray-500">Carregando...</p>;
 
     return (
-        <div className="min-h-screen p-6 space-y-4">
+        <div className="min-h-screen p-6 space-y-4 bg-lassa-branco">
             <div className="flex items-center justify-between">
                 <Link to="/dashboard" className="text-lassa-azul text-sm">← Voltar</Link>
                 <a href={api.exportarRotaUrl(rota.id)} className="bg-green-600 text-white rounded-lg px-4 py-2 text-sm">

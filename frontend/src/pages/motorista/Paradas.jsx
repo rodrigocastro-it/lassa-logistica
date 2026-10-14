@@ -48,9 +48,9 @@ export default function Paradas() {
     }, 0);
 
     return (
-        <div className="min-h-screen p-4 pb-24 space-y-4">
+        <div className="min-h-screen p-4 pb-24 space-y-4 bg-lassa-branco">
             <div className="bg-white rounded-xl shadow-sm p-4 flex justify-between items-center">
-                <h1 className="text-lg font-bold">Paradas</h1>
+                <h1 className="text-lg font-bold text-gray-800">Paradas</h1>
                 <p className="text-sm text-gray-600">
                     Tempo total: {String(Math.floor(tempoTotalMin / 60)).padStart(2, '0')}:{String(tempoTotalMin % 60).padStart(2, '0')}
                 </p>
@@ -90,7 +90,7 @@ export default function Paradas() {
                     <select
                         value={tipo}
                         onChange={(e) => setTipo(e.target.value)}
-                        className="w-full border rounded-lg px-3 py-2"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
                     >
                         <option>Almoço</option>
                         <option>Abastecimento</option>
@@ -98,12 +98,12 @@ export default function Paradas() {
                         <option>Outro</option>
                     </select>
                     <input
-                        className="w-full border rounded-lg px-3 py-2"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
                         placeholder="Observação (opcional)"
                         value={observacao}
                         onChange={(e) => setObservacao(e.target.value)}
                     />
-                    <button type="submit" className="w-full bg-lassa-azul text-white rounded-lg py-2">
+                    <button type="submit" className="w-full bg-lassa-azul hover:bg-lassa-profundo transition-colors text-white rounded-lg py-2">
                         + Adicionar parada
                     </button>
                 </form>

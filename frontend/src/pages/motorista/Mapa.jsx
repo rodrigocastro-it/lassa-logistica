@@ -36,8 +36,8 @@ export default function Mapa() {
     }, [carga]);
 
     return (
-        <div className="min-h-screen p-4 pb-24 space-y-4">
-            <h1 className="text-lg font-bold">Mapa</h1>
+        <div className="min-h-screen p-4 pb-24 space-y-4 bg-lassa-branco">
+            <h1 className="text-lg font-bold text-gray-800">Mapa</h1>
 
             {!carga && <p className="text-gray-500">Carregue uma rota primeiro pra ver a posição do veículo.</p>}
             {carga && erro && <p className="text-lassa-vermelho text-sm">{erro}</p>}

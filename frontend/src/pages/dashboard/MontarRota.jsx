@@ -69,7 +69,7 @@ export default function MontarRota() {
     const paradasSemGps = rota?.paradas.filter((p) => p.latitude == null || p.longitude == null).length || 0;
 
     return (
-        <div className="min-h-screen p-6 space-y-4">
+        <div className="min-h-screen p-6 space-y-4 bg-lassa-branco">
             <Link to="/dashboard" className="text-lassa-azul text-sm">← Voltar</Link>
             <h1 className="text-2xl font-bold text-lassa-azul">Montar Rota</h1>
             <p className="text-sm text-gray-500">
