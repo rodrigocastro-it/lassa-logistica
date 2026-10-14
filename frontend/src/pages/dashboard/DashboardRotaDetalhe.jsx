@@ -28,6 +28,7 @@ export default function DashboardRotaDetalhe() {
     const [motoristas, setMotoristas] = useState([]);
     const [reatribuindo, setReatribuindo] = useState(false);
     const [sincronizando, setSincronizando] = useState(false);
+    const [mostrarMapa, setMostrarMapa] = useState(false);
 
     useEffect(() => {
         api.dashboardRotaDetalhe(id).then(setRota);
@@ -114,10 +115,27 @@ export default function DashboardRotaDetalhe() {
 
             {posicao && (
                 <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
-                    <MapaVeiculo latitude={posicao.latitude} longitude={posicao.longitude} popup={rota.veiculo_placa} />
-                    <p className="text-sm text-gray-600">
-                        {posicao.velocidadeKmh ?? '—'} km/h · atualizado em {posicao.atualizadoEm || '—'}
-                    </p>
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm text-gray-600">
+                            {posicao.velocidadeKmh ?? '—'} km/h · atualizado em {posicao.atualizadoEm || '—'}
+                        </p>
+                        <button
+                            onClick={() => setMostrarMapa((v) => !v)}
+                            className="text-sm text-lassa-azul underline whitespace-nowrap"
+                        >
+                            {mostrarMapa ? 'Ocultar mapa' : 'Ver localização no mapa'}
+                        </button>
+                    </div>
+                    {mostrarMapa && (
+                        <div className="max-w-xl">
+                            <MapaVeiculo
+                                latitude={posicao.latitude}
+                                longitude={posicao.longitude}
+                                popup={rota.veiculo_placa}
+                                altura="220px"
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
