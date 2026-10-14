@@ -75,7 +75,7 @@ export default function Paradas() {
                             <div className="text-right">
                                 <p className="text-sm font-mono">{formatarDuracao(p.inicio_em, p.fim_em)}</p>
                                 {!p.fim_em && (
-                                    <button onClick={() => encerrar(p.id)} className="text-xs text-red-600 mt-1">
+                                    <button onClick={() => encerrar(p.id)} className="text-xs text-lassa-vermelho mt-1">
                                         Encerrar
                                     </button>
                                 )}
@@ -103,7 +103,7 @@ export default function Paradas() {
                         value={observacao}
                         onChange={(e) => setObservacao(e.target.value)}
                     />
-                    <button type="submit" className="w-full bg-blue-600 text-white rounded-lg py-2">
+                    <button type="submit" className="w-full bg-lassa-azul text-white rounded-lg py-2">
                         + Adicionar parada
                     </button>
                 </form>

@@ -6,9 +6,9 @@ import MapaVeiculo from '../../components/MapaVeiculo';
 const STATUS_COR = {
     pendente: 'bg-gray-200 text-gray-700',
     chegada: 'bg-yellow-100 text-yellow-800',
-    inicio: 'bg-blue-100 text-blue-800',
+    inicio: 'bg-lassa-leve/20 text-lassa-profundo',
     fim: 'bg-green-100 text-green-800',
-    problema: 'bg-red-100 text-red-800'
+    problema: 'bg-lassa-vermelho/10 text-lassa-vermelho'
 };
 
 function distanciaKm(lat1, lon1, lat2, lon2) {
@@ -73,7 +73,7 @@ export default function DashboardRotaDetalhe() {
     return (
         <div className="min-h-screen p-6 space-y-4">
             <div className="flex items-center justify-between">
-                <Link to="/dashboard" className="text-blue-700 text-sm">← Voltar</Link>
+                <Link to="/dashboard" className="text-lassa-azul text-sm">← Voltar</Link>
                 <a href={api.exportarRotaUrl(rota.id)} className="bg-green-600 text-white rounded-lg px-4 py-2 text-sm">
                     Exportar CSV (com GPS de chegada)
                 </a>
@@ -86,7 +86,7 @@ export default function DashboardRotaDetalhe() {
                     <button
                         onClick={handleSincronizarVeiculo}
                         disabled={sincronizando}
-                        className="text-xs text-blue-600 underline disabled:opacity-50"
+                        className="text-xs text-lassa-azul underline disabled:opacity-50"
                         title="Busca o veículo atualizado direto do WiBi"
                     >
                         {sincronizando ? 'sincronizando...' : 'sincronizar com o WiBi'}
@@ -136,7 +136,7 @@ export default function DashboardRotaDetalhe() {
                                     <p className="font-semibold">{p.sequencia}. {p.cliente_nome || `Venda ${p.wibi_vd_codigo}`}</p>
                                     <p className="text-sm text-gray-500">{p.cliente_endereco}</p>
                                     {p.problema_descricao && (
-                                        <p className="text-sm text-red-600">Problema: {p.problema_descricao}</p>
+                                        <p className="text-sm text-lassa-vermelho">Problema: {p.problema_descricao}</p>
                                     )}
                                 </div>
                                 <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COR[p.status]}`}>{p.status}</span>
@@ -151,13 +151,13 @@ export default function DashboardRotaDetalhe() {
                                         GPS na chegada (Point Track): {p.chegada_lat}, {p.chegada_lng}
                                     </p>
                                     {diffKm != null && (
-                                        <p className={diffKm > 0.5 ? 'text-red-600 font-medium' : 'text-green-700'}>
+                                        <p className={diffKm > 0.5 ? 'text-lassa-vermelho font-medium' : 'text-green-700'}>
                                             Diferença: {diffKm.toFixed(2)} km
                                             {diffKm > 0.5 && ' — endereço cadastrado pode estar errado'}
                                         </p>
                                     )}
                                     <a
-                                        className="text-blue-600 underline"
+                                        className="text-lassa-azul underline"
                                         target="_blank"
                                         rel="noreferrer"
                                         href={`https://www.google.com/maps?q=${p.chegada_lat},${p.chegada_lng}`}

@@ -40,7 +40,7 @@ export default function Mapa() {
             <h1 className="text-lg font-bold">Mapa</h1>
 
             {!carga && <p className="text-gray-500">Carregue uma rota primeiro pra ver a posição do veículo.</p>}
-            {carga && erro && <p className="text-red-600 text-sm">{erro}</p>}
+            {carga && erro && <p className="text-lassa-vermelho text-sm">{erro}</p>}
 
             {posicao && (
                 <>

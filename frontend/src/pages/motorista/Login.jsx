@@ -32,7 +32,8 @@ export default function Login() {
     return (
         <div className="min-h-screen flex items-center justify-center px-4">
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm space-y-4">
-                <h1 className="text-xl font-bold text-center text-blue-700">Lassa Logística</h1>
+                <img src="/logo-lassa.png" alt="Lassa" className="h-16 mx-auto" />
+                <h1 className="text-xl font-bold text-center text-lassa-azul">Lassa Logística</h1>
                 <p className="text-center text-sm text-gray-500">Acesso do motorista</p>
 
                 <input
@@ -50,12 +51,12 @@ export default function Login() {
                     onChange={(e) => setSenha(e.target.value)}
                 />
 
-                {erro && <p className="text-red-600 text-sm">{erro}</p>}
+                {erro && <p className="text-lassa-vermelho text-sm">{erro}</p>}
 
                 <button
                     type="submit"
                     disabled={carregando}
-                    className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium disabled:opacity-50"
+                    className="w-full bg-lassa-azul text-white rounded-lg py-2 font-medium disabled:opacity-50"
                 >
                     {carregando ? 'Entrando...' : 'Entrar'}
                 </button>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 
 function corStatus(rota) {
-    if (Number(rota.paradas_com_problema) > 0) return 'border-red-500';
+    if (Number(rota.paradas_com_problema) > 0) return 'border-lassa-vermelho';
     if (Number(rota.paradas_concluidas) === Number(rota.total_paradas) && Number(rota.total_paradas) > 0) {
         return 'border-green-500';
     }
@@ -23,7 +23,10 @@ export default function DashboardRotas() {
     return (
         <div className="min-h-screen p-6 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-                <h1 className="text-2xl font-bold text-blue-700">Dashboard de Rotas</h1>
+                <div className="flex items-center gap-3">
+                    <img src="/logo-lassa.png" alt="Lassa" className="h-10" />
+                    <h1 className="text-2xl font-bold text-lassa-azul">Dashboard de Rotas</h1>
+                </div>
                 <div className="flex items-center gap-3">
                     <input
                         type="date"
@@ -31,7 +34,7 @@ export default function DashboardRotas() {
                         onChange={(e) => setData(e.target.value)}
                         className="border rounded-lg px-3 py-2"
                     />
-                    <Link to="/dashboard/montar" className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm">
+                    <Link to="/dashboard/montar" className="bg-lassa-azul text-white rounded-lg px-4 py-2 text-sm">
                         + Montar rota
                     </Link>
                 </div>
@@ -80,7 +83,7 @@ export default function DashboardRotas() {
                         <div className="text-right text-sm">
                             <p>{rota.paradas_concluidas}/{rota.total_paradas} paradas</p>
                             {Number(rota.paradas_com_problema) > 0 && (
-                                <p className="text-red-600 font-medium">{rota.paradas_com_problema} com problema</p>
+                                <p className="text-lassa-vermelho font-medium">{rota.paradas_com_problema} com problema</p>
                             )}
                         </div>
                     </Link>

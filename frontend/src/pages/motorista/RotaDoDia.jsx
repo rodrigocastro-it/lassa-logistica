@@ -9,9 +9,9 @@ import MenuMotorista from './MenuMotorista';
 const STATUS_COR = {
     pendente: 'bg-gray-200 text-gray-700',
     chegada: 'bg-yellow-100 text-yellow-800',
-    inicio: 'bg-blue-100 text-blue-800',
+    inicio: 'bg-lassa-leve/20 text-lassa-profundo',
     fim: 'bg-green-100 text-green-800',
-    problema: 'bg-red-100 text-red-800'
+    problema: 'bg-lassa-vermelho/10 text-lassa-vermelho'
 };
 
 export default function RotaDoDia() {
@@ -67,7 +67,7 @@ export default function RotaDoDia() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center px-4">
                 <form onSubmit={handleBuscarCarga} className="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm space-y-4">
-                    <h1 className="text-lg font-bold text-blue-700">Carregar rota do dia</h1>
+                    <h1 className="text-lg font-bold text-lassa-azul">Carregar rota do dia</h1>
                     <input
                         className="w-full border rounded-lg px-3 py-2"
                         placeholder="Número da carga"
@@ -76,11 +76,11 @@ export default function RotaDoDia() {
                         inputMode="numeric"
                         autoFocus
                     />
-                    {erro && <p className="text-red-600 text-sm">{erro}</p>}
+                    {erro && <p className="text-lassa-vermelho text-sm">{erro}</p>}
                     <button
                         type="submit"
                         disabled={carregando}
-                        className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium disabled:opacity-50"
+                        className="w-full bg-lassa-azul text-white rounded-lg py-2 font-medium disabled:opacity-50"
                     >
                         {carregando ? 'Buscando...' : 'Buscar carga'}
                     </button>
@@ -96,7 +96,7 @@ export default function RotaDoDia() {
 
     return (
         <div className="min-h-screen pb-20">
-            <header className="bg-blue-700 text-white p-4 rounded-b-2xl flex items-start justify-between">
+            <header className="bg-lassa-azul text-white p-4 rounded-b-2xl flex items-start justify-between">
                 <div>
                     <p className="text-sm opacity-80">Carga #{carga.wibi_ca_id}</p>
                     <h1 className="text-xl font-bold">{grupos.length} paradas ({carga.paradas.length} notas)</h1>
@@ -105,7 +105,7 @@ export default function RotaDoDia() {
                         <p className="text-sm opacity-90">~{Number(carga.distancia_total_km).toFixed(0)} km (ida e volta)</p>
                     )}
                 </div>
-                <button onClick={handleFinalizar} className="text-xs bg-blue-800 rounded-lg px-3 py-2">
+                <button onClick={handleFinalizar} className="text-xs bg-lassa-profundo rounded-lg px-3 py-2">
                     Finalizar rota
                 </button>
             </header>
@@ -121,7 +121,7 @@ export default function RotaDoDia() {
                                 <p className="font-semibold">
                                     {g.sequencia}. {g.paradas[0].cliente_nome || `Venda ${g.paradas[0].wibi_vd_codigo}`}
                                     {g.paradas.length > 1 && (
-                                        <span className="ml-2 text-xs font-normal text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                                        <span className="ml-2 text-xs font-normal text-lassa-azul bg-lassa-leve/10 px-2 py-0.5 rounded-full">
                                             {g.paradas.length} notas
                                         </span>
                                     )}

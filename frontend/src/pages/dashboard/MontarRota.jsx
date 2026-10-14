@@ -70,15 +70,15 @@ export default function MontarRota() {
 
     return (
         <div className="min-h-screen p-6 space-y-4">
-            <Link to="/dashboard" className="text-blue-700 text-sm">← Voltar</Link>
-            <h1 className="text-2xl font-bold text-blue-700">Montar Rota</h1>
+            <Link to="/dashboard" className="text-lassa-azul text-sm">← Voltar</Link>
+            <h1 className="text-2xl font-bold text-lassa-azul">Montar Rota</h1>
             <p className="text-sm text-gray-500">
                 Cargas em aberto no WiBi até hoje, prontas pra montar — clica em "Montar" em vez de digitar o número.
             </p>
 
             <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
                 {carregandoLista && <p className="text-sm text-gray-500">Buscando cargas no WiBi...</p>}
-                {erroLista && <p className="text-red-600 text-sm">{erroLista}</p>}
+                {erroLista && <p className="text-lassa-vermelho text-sm">{erroLista}</p>}
                 {!carregandoLista && !erroLista && cargasWibi.length === 0 && (
                     <p className="text-sm text-gray-500">Nenhuma carga em aberto até hoje.</p>
                 )}
@@ -105,7 +105,7 @@ export default function MontarRota() {
                             <button
                                 onClick={() => handleMontarDaLista(c.caId)}
                                 disabled={montandoId === c.caId}
-                                className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm whitespace-nowrap disabled:opacity-50"
+                                className="bg-lassa-azul text-white rounded-lg px-4 py-2 text-sm whitespace-nowrap disabled:opacity-50"
                             >
                                 {montandoId === c.caId ? 'Montando...' : 'Montar'}
                             </button>
@@ -131,14 +131,14 @@ export default function MontarRota() {
                     <button
                         type="submit"
                         disabled={carregando || !numeroCarga}
-                        className="bg-blue-600 text-white rounded-lg px-4 py-2 disabled:opacity-50"
+                        className="bg-lassa-azul text-white rounded-lg px-4 py-2 disabled:opacity-50"
                     >
                         {carregando ? 'Montando...' : 'Montar rota'}
                     </button>
                 </form>
             </details>
 
-            {erro && <p className="text-red-600 text-sm">{erro}</p>}
+            {erro && <p className="text-lassa-vermelho text-sm">{erro}</p>}
 
             {rota && (
                 <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">

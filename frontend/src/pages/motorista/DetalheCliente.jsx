@@ -42,7 +42,7 @@ export default function DetalheCliente() {
 
     return (
         <div className="min-h-screen p-4 space-y-4">
-            <button onClick={() => navigate(-1)} className="text-blue-700 text-sm">← Voltar</button>
+            <button onClick={() => navigate(-1)} className="text-lassa-azul text-sm">← Voltar</button>
 
             <div className="bg-white rounded-xl shadow-sm p-4 space-y-1">
                 <h1 className="text-lg font-bold">{principal.cliente_nome || `Venda ${principal.wibi_vd_codigo}`}</h1>
@@ -67,7 +67,7 @@ export default function DetalheCliente() {
                 </div>
             )}
 
-            {erro && <p className="text-red-600 text-sm">{erro}</p>}
+            {erro && <p className="text-lassa-vermelho text-sm">{erro}</p>}
 
             <div className="grid grid-cols-2 gap-3">
                 <button
@@ -78,7 +78,7 @@ export default function DetalheCliente() {
                 </button>
                 <button
                     onClick={() => marcar('inicio')}
-                    className="bg-blue-600 text-white rounded-xl py-3 font-medium"
+                    className="bg-lassa-azul text-white rounded-xl py-3 font-medium"
                 >
                     Marcar Início
                 </button>
@@ -90,7 +90,7 @@ export default function DetalheCliente() {
                 </button>
                 <button
                     onClick={() => setMostrarProblema(true)}
-                    className="bg-red-600 text-white rounded-xl py-3 font-medium"
+                    className="bg-lassa-vermelho text-white rounded-xl py-3 font-medium"
                 >
                     Marcar Problema
                 </button>
@@ -109,7 +109,7 @@ export default function DetalheCliente() {
                     <button
                         onClick={() => marcar('problema', descricaoProblema)}
                         disabled={!descricaoProblema}
-                        className="w-full bg-red-600 text-white rounded-lg py-2 disabled:opacity-50"
+                        className="w-full bg-lassa-vermelho text-white rounded-lg py-2 disabled:opacity-50"
                     >
                         Confirmar problema
                     </button>
