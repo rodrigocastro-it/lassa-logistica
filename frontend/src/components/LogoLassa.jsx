@@ -5,7 +5,7 @@ import React from 'react';
 export default function LogoLassa({ className = 'h-10', comTexto = true }) {
     return (
         <div className={`flex items-center gap-2 ${className}`}>
-            <img src="/logo-lassa.png" alt="Lassa" className="h-full w-auto" />
+            <img src="/logo-lassa-oficial.png" alt="Lassa" className="h-full w-auto" />
             {comTexto && (
                 <span className="font-bold text-lassa-profundo leading-none" style={{ fontSize: '1.15em' }}>
                     Lassa
