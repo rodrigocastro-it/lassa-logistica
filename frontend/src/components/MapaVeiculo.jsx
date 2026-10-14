@@ -17,10 +17,18 @@ export default function MapaVeiculo({ latitude, longitude, popup, altura = '300p
 
     useEffect(() => {
         if (!divRef.current || mapRef.current) return;
-        mapRef.current = L.map(divRef.current).setView([latitude, longitude], 14);
+        // Zoom por scroll começa desligado -- senão, ao rolar a página pra
+        // baixo passando por cima do mapa, o scroll vira zoom em vez de
+        // continuar descendo a tela. Só liga quando a pessoa clica no mapa
+        // (sinalizando que quer mesmo interagir com ele) e desliga de novo
+        // quando o mouse sai, pra não ficar "preso".
+        mapRef.current = L.map(divRef.current, { scrollWheelZoom: false }).setView([latitude, longitude], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(mapRef.current);
+
+        mapRef.current.on('click', () => mapRef.current.scrollWheelZoom.enable());
+        divRef.current.addEventListener('mouseleave', () => mapRef.current?.scrollWheelZoom.disable());
 
         return () => {
             mapRef.current?.remove();
