@@ -119,12 +119,17 @@ não existe valor real cadastrado pra aquela cidade).
 Testado rodando as migrações contra um Postgres local antes de ir pra
 produção — bateu certinho com os valores confirmados.
 
+**Resolvido em 2026-10-18:** Taperuaba/Bilheira não era conflito, eram
+dois valores legítimos pro mesmo lugar, dependendo do contexto — mesma
+lógica do cálculo de desvio (ver Passo 3): R$1.000 quando a entrega
+"pega carona" numa carga que já inclui a rota Taperuaba, R$4.400 quando é
+viagem dedicada só pra lá. Adicionada coluna `minimo_sozinho` em
+`rotas_paradas_minimas`; `buscarMinimoConhecido(nome, {sozinho})` escolhe
+o valor certo sozinho, baseado em a carga avaliada ter só essa cidade ou
+vir acompanhada de outras da mesma rota. Testado de novo contra Postgres
+local antes de subir.
+
 **Pendências explícitas, não resolvidas ainda (não adivinhar):**
-- Taperuaba / "Bilheira": a folha tem dois valores diferentes pro mesmo
-  lugar (R$1.000 numa linha, "Somente Bilheira — R$4.400,00" escrito
-  à parte embaixo). Gravado R$1.000 por enquanto (foi o valor confirmado
-  explicitamente), com observação no banco sinalizando o conflito. Falta
-  o Rodrigo esclarecer se o R$4.400 substitui ou é outra coisa.
 - Cronograma de dias (segunda folha, com motoristas e caminhões): ainda
   não gravado. A leitura por foto gerou dúvida (rotas que pegam mais de
   um dia, ex: Marco/Bela Cruz/Cruz/Jijoca/Preá/Aranaú = terça E quarta).

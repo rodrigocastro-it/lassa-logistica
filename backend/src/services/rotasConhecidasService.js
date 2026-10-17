@@ -9,14 +9,21 @@ const { pool } = require('../db/pg');
  *    contenha o nome, já que normalmente é a mais específica/completa.
  * 3. Mínimo base da rota, se o nome da cidade bater com o nome da rota.
  *
+ * Algumas paradas têm dois valores (confirmado com o Rodrigo em
+ * 2026-10-18, caso da Bilheira): um mais baixo quando a parada "pega
+ * carona" numa rota que já vai passar por lá, e um mais alto quando é uma
+ * viagem dedicada só pra ela. `sozinho=true` (a carga avaliada só tem essa
+ * cidade, nenhuma outra da mesma rota) pede o valor de viagem dedicada,
+ * quando existir cadastrado.
+ *
  * Retorna null se não achar nada cadastrado -- nesse caso quem chamou deve
  * cair pro cálculo por distância.
  */
-async function buscarMinimoConhecido(nomeCidade) {
+async function buscarMinimoConhecido(nomeCidade, { sozinho = false } = {}) {
     if (!nomeCidade) return null;
 
     const parada = await pool.query(
-        `SELECT rp.minimo, rp.nome_parada AS fonte, r.nome AS rota_nome
+        `SELECT rp.minimo, rp.minimo_sozinho, rp.nome_parada AS fonte, r.nome AS rota_nome
          FROM rotas_paradas_minimas rp
          JOIN rotas r ON r.id = rp.rota_id
          WHERE rp.nome_parada ILIKE $1
@@ -24,9 +31,11 @@ async function buscarMinimoConhecido(nomeCidade) {
         [nomeCidade]
     );
     if (parada.rows.length > 0) {
+        const row = parada.rows[0];
+        const usaSozinho = sozinho && row.minimo_sozinho != null;
         return {
-            minimo: Number(parada.rows[0].minimo),
-            fonte: `parada "${parada.rows[0].fonte}" da rota ${parada.rows[0].rota_nome}`
+            minimo: Number(usaSozinho ? row.minimo_sozinho : row.minimo),
+            fonte: `parada "${row.fonte}" da rota ${row.rota_nome}${usaSozinho ? ' (entrega avulsa, sem o resto da rota)' : ''}`
         };
     }
 

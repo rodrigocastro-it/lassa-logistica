@@ -77,6 +77,8 @@ async function avaliarPorCidade(vendas, config, origem) {
         porCidade.get(chave).vendas.push(venda);
     }
 
+    const umaUnicaCidade = porCidade.size === 1;
+
     const resultados = [];
     for (const grupo of porCidade.values()) {
         const valorTotal = grupo.vendas.reduce((acc, v) => acc + v.valorTotal, 0);
@@ -99,7 +101,7 @@ async function avaliarPorCidade(vendas, config, origem) {
             gpsAproximado = !!ponto;
         }
 
-        const conhecido = await buscarMinimoConhecido(grupo.cidadeNome);
+        const conhecido = await buscarMinimoConhecido(grupo.cidadeNome, { sozinho: umaUnicaCidade });
 
         if (conhecido) {
             minimo = conhecido.minimo;
