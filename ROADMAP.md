@@ -31,17 +31,55 @@ validado em uso real.
   tá na rua.
 - Validado em produção pela Nina.
 
-## Passo 2 — decidir automaticamente qual venda vai em qual carga (não iniciado)
+## Passo 2 — decidir o que vale a pena entregar e montar a carga (iniciado em 2026-10-17)
 
-Decisão explícita: **não implementar ainda.** Automatizar isso hoje
-significaria inventar regras de negócio que não existem documentadas em
-lugar nenhum — quem decide isso hoje é a Jacineuda, manualmente, levando em
-conta coisas como capacidade do veículo, região e prazo de entrega. Antes de
-qualquer código aqui, precisa:
+A dor real (relatada pelo Rodrigo em 2026-10-17): todo dia a Jacineuda monta
+carga por cidade/região, mas trava pra saber se o total daquela região
+atingiu o "mínimo" que compensa o custo da viagem. Isso vira uma cadeia de
+mensagens no WhatsApp (Jacineuda → Erileila → Rodrigo decide → Jacineuda
+ajusta) que atrasa todo mundo, incluindo a Nina esperando pra imprimir o
+roteiro. A Roberta por sua vez questiona exclusões cliente a cliente, porque
+não leva o custo logístico em conta.
 
-1. Entrevistar a Jacineuda pra capturar os critérios reais que ela usa.
-2. Confirmar esses critérios com exemplos reais (não just perguntar "como
-   você decide", e sim validar com casos concretos).
+Fórmula confirmada pelo Rodrigo (é a mesma conta que a Erileila faz hoje de
+cabeça, só que sem calculadora):
+
+```
+mínimo = distância até o cliente (km, só ida) × fator_ida_volta × custo_km_caminhao × margem_multiplicador
+```
+
+Exemplo dado: 15km × 2 × 5 × 10 = R$ 1.500.
+
+Implementado (nova aba "Planejamento de Carga", separada do acompanhamento
+de entregas, em `/dashboard/planejamento`):
+- `config_custo_logistico` (tabela, singleton): guarda `custo_km_caminhao`,
+  `fator_ida_volta`, `margem_multiplicador` editáveis pela torre de
+  controle, sem precisar mexer em código se a diretoria mudar os valores.
+- `regioes_cronograma` (tabela): cadastro de qual cidade/região entrega em
+  qual dia da semana — isso não existe no WiBi, é definido com a diretoria.
+- Calculadora manual: informa a distância (ou lat/lng), mostra o mínimo, e
+  compara com o valor total informado da região/carga.
+- `calcularCustoDesvio` (backend, `custoLogisticoService.js`): fórmula de
+  inserção de rota (dist(A,B) + dist(B,C) - dist(A,C)) pra calcular quanto
+  custa a mais incluir uma parada que não estava na rota original — ainda
+  não exposta na tela, só a API.
+
+**Ainda não automatizado** (depende de confirmar 2 pontos no schema do
+WiBi antes de implementar, pra não chutar):
+1. Como saber quais vendas já lançadas ainda **não foram colocadas em
+   nenhuma carga** (candidatas a avaliar) — precisa confirmar o significado
+   de `t_vendas.vd_status` ou achar o critério certo (ex: venda sem
+   registro em `t_carga_vendas`).
+2. Como saber a **cidade/região** de cada cliente direto no WiBi (pra
+   agrupar e comparar com `regioes_cronograma`) — os campos já confirmados
+   (`ed_endereco_completo`, `ed_logradouro` etc.) não incluem uma coluna de
+   cidade isolada; precisa achar o campo certo ou confirmar que não existe
+   e decidir outra forma de agrupar (ex: por CEP, por geocodificação).
+
+Só depois dessas duas confirmações dá pra montar a tela que lista
+automaticamente "essas vendas pendentes, agrupadas por região, atingiram
+ou não o mínimo" — hoje a calculadora já existe, falta ela ser alimentada
+sozinha em vez de digitar os números na mão.
 
 ## Passo 3 — melhor rota (geografia real, não linha reta)
 

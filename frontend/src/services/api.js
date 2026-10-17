@@ -47,5 +47,19 @@ export const api = {
     reatribuirMotorista: (id, motoristaId) =>
         request(`/dashboard/rotas/${id}/motorista`, { method: 'PATCH', body: { motoristaId }, auth: false }),
     sincronizarVeiculo: (id) =>
-        request(`/dashboard/rotas/${id}/sincronizar-veiculo`, { method: 'PATCH', auth: false })
+        request(`/dashboard/rotas/${id}/sincronizar-veiculo`, { method: 'PATCH', auth: false }),
+    obterConfigCusto: () => request('/planejamento/config-custo', { auth: false }),
+    atualizarConfigCusto: (config) =>
+        request('/planejamento/config-custo', { method: 'PUT', body: config, auth: false }),
+    calcularMinimo: (dados) =>
+        request('/planejamento/calcular-minimo', { method: 'POST', body: dados, auth: false }),
+    calcularDesvio: (dados) =>
+        request('/planejamento/calcular-desvio', { method: 'POST', body: dados, auth: false }),
+    listarRegioes: () => request('/planejamento/regioes', { auth: false }),
+    criarRegiao: (nomeRegiao, diaSemana) =>
+        request('/planejamento/regioes', { method: 'POST', body: { nomeRegiao, diaSemana }, auth: false }),
+    atualizarRegiao: (id, dados) =>
+        request(`/planejamento/regioes/${id}`, { method: 'PATCH', body: dados, auth: false }),
+    removerRegiao: (id) =>
+        request(`/planejamento/regioes/${id}`, { method: 'DELETE', auth: false })
 };

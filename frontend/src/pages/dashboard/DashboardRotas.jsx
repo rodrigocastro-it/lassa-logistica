@@ -38,6 +38,12 @@ export default function DashboardRotas() {
                             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lassa-leve"
                         />
                         <Link
+                            to="/dashboard/planejamento"
+                            className="text-lassa-azul hover:underline text-sm font-medium"
+                        >
+                            Planejamento de carga
+                        </Link>
+                        <Link
                             to="/dashboard/montar"
                             className="bg-lassa-azul hover:bg-lassa-profundo transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium"
                         >

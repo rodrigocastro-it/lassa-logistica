@@ -19,6 +19,7 @@ const cargasRoutes = require('./routes/cargas');
 const paradasRoutes = require('./routes/paradas');
 const dashboardRoutes = require('./routes/dashboard');
 const pointtrackRoutes = require('./routes/pointtrack');
+const planejamentoRoutes = require('./routes/planejamento');
 
 const app = express();
 app.use(cors());
@@ -29,6 +30,7 @@ app.use('/api/cargas', cargasRoutes);
 app.use('/api/paradas', paradasRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/pointtrack', pointtrackRoutes);
+app.use('/api/planejamento', planejamentoRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
