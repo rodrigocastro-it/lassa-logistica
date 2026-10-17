@@ -77,17 +77,29 @@ de entregas, em `/dashboard/planejamento`):
   custa a mais incluir uma parada que não estava na rota original — ainda
   não exposta na tela, só a API.
 
-**Ainda não automatizado** (depende de confirmar 2 pontos no schema do
-WiBi antes de implementar, pra não chutar):
+**Confirmado em 2026-10-17** (consulta em `INFORMATION_SCHEMA.COLUMNS`):
+- Valor da venda: `t_vendas.vd_valortotal`.
+- Cidade do cliente: `t_enderecos.cd_id` → `t_cidades.cd_id` (nome em
+  `t_cidades.cd_descricao`, UF em `t_cidades.uf_id`).
+
+Implementado com isso: `GET /planejamento/avaliar-carga/:caId` (backend:
+`wibiCargaService.getCargaParaAvaliacao` + `custoLogisticoService.avaliarPorCidade`).
+Busca a carga pelo número, agrupa as vendas por cidade, soma
+`vd_valortotal` de cada grupo, calcula a distância (centróide das
+coordenadas do grupo até a origem da Lassa) e o mínimo pela fórmula — e
+mostra "bate" ou "não bate, falta R$X" por cidade, direto na aba
+Planejamento de Carga. Essa é a parte que resolve de fato a dor relatada
+pelo Rodrigo (não é mais só uma calculadora manual).
+
+**Ainda não automatizado:**
 1. Como saber quais vendas já lançadas ainda **não foram colocadas em
-   nenhuma carga** (candidatas a avaliar) — precisa confirmar o significado
-   de `t_vendas.vd_status` ou achar o critério certo (ex: venda sem
-   registro em `t_carga_vendas`).
-2. Como saber a **cidade/região** de cada cliente direto no WiBi (pra
-   agrupar e comparar com `regioes_cronograma`) — os campos já confirmados
-   (`ed_endereco_completo`, `ed_logradouro` etc.) não incluem uma coluna de
-   cidade isolada; precisa achar o campo certo ou confirmar que não existe
-   e decidir outra forma de agrupar (ex: por CEP, por geocodificação).
+   nenhuma carga** (hoje precisa saber o número da carga de antemão,
+   porque a Jacineuda já montou manualmente) — precisa confirmar o
+   significado de `t_vendas.vd_status` ou achar o critério certo (ex:
+   venda sem registro em `t_carga_vendas`), pra no futuro sugerir cargas
+   inteiras a partir do zero, não só avaliar uma carga já montada.
+2. Cruzar com `regioes_cronograma` (cronograma de dia da semana por
+   região) — o Rodrigo vai passar essa tabela depois.
 
 Só depois dessas duas confirmações dá pra montar a tela que lista
 automaticamente "essas vendas pendentes, agrupadas por região, atingiram

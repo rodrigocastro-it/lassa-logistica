@@ -48,4 +48,61 @@ function calcularCustoDesvio(pontoA, pontoB, pontoC) {
     return ab + bc - ac;
 }
 
-module.exports = { obterConfigCusto, atualizarConfigCusto, calcularMinimo, calcularCustoDesvio };
+/**
+ * Agrupa as vendas de uma carga por cidade, soma o valor de cada grupo,
+ * calcula a distância até lá (centróide dos clientes com GPS daquele
+ * grupo, a partir da origem da Lassa) e o mínimo que o grupo precisa
+ * somar pra compensar a viagem. Não decide nada sozinho -- só mostra o
+ * número pra quem monta a carga decidir.
+ */
+function avaliarPorCidade(vendas, config, origem) {
+    const porCidade = new Map();
+    for (const venda of vendas) {
+        const chave = venda.cidadeId ?? `sem-cidade:${venda.cidadeNome}`;
+        if (!porCidade.has(chave)) {
+            porCidade.set(chave, { cidadeNome: venda.cidadeNome, uf: venda.uf, vendas: [] });
+        }
+        porCidade.get(chave).vendas.push(venda);
+    }
+
+    return Array.from(porCidade.values()).map((grupo) => {
+        const valorTotal = grupo.vendas.reduce((acc, v) => acc + v.valorTotal, 0);
+        const comGps = grupo.vendas.filter((v) => v.latitude != null && v.longitude != null);
+
+        let distanciaKm = null;
+        let minimo = null;
+        let diferenca = null;
+        let atingiuMinimo = null;
+
+        if (comGps.length > 0) {
+            const lat = comGps.reduce((acc, v) => acc + v.latitude, 0) / comGps.length;
+            const lng = comGps.reduce((acc, v) => acc + v.longitude, 0) / comGps.length;
+            distanciaKm = distanciaHaversineKm(origem.lat, origem.lng, lat, lng);
+            minimo = calcularMinimo(distanciaKm, config);
+            diferenca = valorTotal - minimo;
+            atingiuMinimo = diferenca >= 0;
+        }
+
+        return {
+            cidadeNome: grupo.cidadeNome,
+            uf: grupo.uf,
+            totalClientes: new Set(grupo.vendas.map((v) => v.clCodigo)).size,
+            totalNotas: grupo.vendas.length,
+            valorTotal: Number(valorTotal.toFixed(2)),
+            distanciaKm: distanciaKm != null ? Number(distanciaKm.toFixed(2)) : null,
+            minimo: minimo != null ? Number(minimo.toFixed(2)) : null,
+            diferenca: diferenca != null ? Number(diferenca.toFixed(2)) : null,
+            atingiuMinimo,
+            semGps: comGps.length === 0,
+            vendas: grupo.vendas
+        };
+    }).sort((a, b) => (a.atingiuMinimo === b.atingiuMinimo ? 0 : a.atingiuMinimo ? 1 : -1));
+}
+
+module.exports = {
+    obterConfigCusto,
+    atualizarConfigCusto,
+    calcularMinimo,
+    calcularCustoDesvio,
+    avaliarPorCidade
+};

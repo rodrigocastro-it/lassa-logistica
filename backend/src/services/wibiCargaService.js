@@ -166,4 +166,66 @@ async function listarCargasEmEntrega(dataLimite) {
     }));
 }
 
-module.exports = { getCargaByNumero, listarCargasAbertas, listarCargasEmEntrega };
+/**
+ * Busca uma carga no WiBi pelo número e agrupa os clientes por cidade, com
+ * o valor total de cada venda e a cidade (confirmado em 2026-10-17):
+ *   - valor da venda: t_vendas.vd_valortotal
+ *   - cidade do cliente: t_enderecos.cd_id -> t_cidades.cd_descricao
+ *
+ * Usada pra avaliar se o total de cada cidade dentro da carga compensa o
+ * deslocamento (ver custoLogisticoService). Só leitura.
+ */
+async function getCargaParaAvaliacao(caId) {
+    const pool = await getWibiPool();
+
+    const cargaResult = await pool.request()
+        .input('caId', sql.Int, caId)
+        .query(`SELECT ca.ca_id, ca.ca_status, ca.ca_data_entrega FROM dbo.t_carga ca WHERE ca.ca_id = @caId`);
+
+    if (cargaResult.recordset.length === 0) {
+        return null;
+    }
+    const carga = cargaResult.recordset[0];
+
+    const vendasResult = await pool.request()
+        .input('caId', sql.Int, caId)
+        .query(`
+            SELECT cv.vd_codigo, v.cl_codigo, v.vd_valortotal,
+                   cl.en_codigo, cl.cl_latitude, cl.cl_longitude,
+                   en.en_nome_completo, en.en_nome_abreviado,
+                   ed.ed_latitude, ed.ed_longitude, ed.ed_error,
+                   ed.ed_endereco_completo, ed.cd_id,
+                   cid.cd_descricao, cid.uf_id
+            FROM dbo.t_carga_vendas cv
+            JOIN dbo.t_vendas v ON v.vd_codigo = cv.vd_codigo
+            LEFT JOIN dbo.t_clientes cl ON cl.cl_codigo = v.cl_codigo
+            LEFT JOIN dbo.t_entidades en ON en.en_codigo = cl.en_codigo
+            LEFT JOIN dbo.t_enderecos ed ON ed.en_codigo = cl.en_codigo
+            LEFT JOIN dbo.t_cidades cid ON cid.cd_id = ed.cd_id
+            WHERE cv.ca_id = @caId
+            ORDER BY cid.cd_descricao, cv.vd_codigo
+        `);
+
+    const vendas = vendasResult.recordset.map((row) => ({
+        vdCodigo: row.vd_codigo,
+        clCodigo: row.cl_codigo,
+        valorTotal: Number(row.vd_valortotal) || 0,
+        clienteNome: row.en_nome_abreviado || row.en_nome_completo || null,
+        endereco: row.ed_endereco_completo || null,
+        cidadeId: row.cd_id ?? null,
+        cidadeNome: row.cd_descricao || 'Sem cidade cadastrada',
+        uf: row.uf_id || null,
+        latitude: parseFloat(row.ed_latitude ?? row.cl_latitude) || null,
+        longitude: parseFloat(row.ed_longitude ?? row.cl_longitude) || null,
+        gpsComErro: !!row.ed_error
+    }));
+
+    return {
+        caId: carga.ca_id,
+        status: carga.ca_status,
+        dataEntrega: carga.ca_data_entrega,
+        vendas
+    };
+}
+
+module.exports = { getCargaByNumero, listarCargasAbertas, listarCargasEmEntrega, getCargaParaAvaliacao };

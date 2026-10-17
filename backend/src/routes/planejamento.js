@@ -6,9 +6,11 @@ const {
     obterConfigCusto,
     atualizarConfigCusto,
     calcularMinimo,
-    calcularCustoDesvio
+    calcularCustoDesvio,
+    avaliarPorCidade
 } = require('../services/custoLogisticoService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
+const { getCargaParaAvaliacao } = require('../services/wibiCargaService');
 
 const router = express.Router();
 
@@ -58,6 +60,30 @@ router.post('/calcular-desvio', asyncHandler(async (req, res) => {
     const desvioKm = calcularCustoDesvio(pontoA, pontoB, pontoC);
     const custoDesvio = calcularMinimo(desvioKm, config);
     res.json({ desvioKm: Number(desvioKm.toFixed(2)), custoDesvio: Number(custoDesvio.toFixed(2)), config });
+}));
+
+// O pedido real do Rodrigo (2026-10-17): em vez de só uma calculadora manual,
+// pegar a carga pelo número e já mostrar, cidade por cidade, se o valor
+// total bateu o mínimo -- a mesma conta que a Jacineuda/Erileila fazem hoje
+// na mão, só que automática.
+router.get('/avaliar-carga/:caId', asyncHandler(async (req, res) => {
+    const caId = parseInt(req.params.caId, 10);
+    if (!Number.isInteger(caId)) {
+        return res.status(400).json({ erro: 'Número de carga inválido.' });
+    }
+
+    try {
+        const carga = await getCargaParaAvaliacao(caId);
+        if (!carga) {
+            return res.status(404).json({ erro: `Carga ${caId} não encontrada no WiBi.` });
+        }
+        const config = await obterConfigCusto();
+        const cidades = avaliarPorCidade(carga.vendas, config, origem);
+        res.json({ caId: carga.caId, status: carga.status, dataEntrega: carga.dataEntrega, cidades });
+    } catch (err) {
+        console.error('Erro ao avaliar carga:', err);
+        res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
+    }
 }));
 
 router.get('/regioes', asyncHandler(async (req, res) => {

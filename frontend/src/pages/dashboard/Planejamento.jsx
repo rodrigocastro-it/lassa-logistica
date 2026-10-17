@@ -17,6 +17,11 @@ export default function Planejamento() {
     const [resultadoMinimo, setResultadoMinimo] = useState(null);
     const [valorTotalCarga, setValorTotalCarga] = useState('');
 
+    const [numeroCarga, setNumeroCarga] = useState('');
+    const [avaliacao, setAvaliacao] = useState(null);
+    const [carregandoAvaliacao, setCarregandoAvaliacao] = useState(false);
+    const [erroAvaliacao, setErroAvaliacao] = useState('');
+
     useEffect(() => {
         api.obterConfigCusto().then(setConfig);
         api.listarRegioes().then(setRegioes);
@@ -34,6 +39,21 @@ export default function Planejamento() {
             setConfig(atualizado);
         } finally {
             setSalvandoConfig(false);
+        }
+    }
+
+    async function avaliarCarga(e) {
+        e.preventDefault();
+        setErroAvaliacao('');
+        setCarregandoAvaliacao(true);
+        setAvaliacao(null);
+        try {
+            const resultado = await api.avaliarCarga(parseInt(numeroCarga, 10));
+            setAvaliacao(resultado);
+        } catch (err) {
+            setErroAvaliacao(err.message);
+        } finally {
+            setCarregandoAvaliacao(false);
         }
     }
 
@@ -73,6 +93,71 @@ export default function Planejamento() {
             </header>
 
             <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
+                <section className="bg-white rounded-xl shadow-sm p-5 space-y-4 border-2 border-lassa-leve/30">
+                    <div>
+                        <p className="font-semibold text-gray-700">Avaliar carga por número</p>
+                        <p className="text-sm text-gray-400">
+                            Digita o número da carga lançada no WiBi — o sistema agrupa os clientes por cidade, soma
+                            o valor de cada grupo e já mostra se bateu o mínimo.
+                        </p>
+                    </div>
+                    <form onSubmit={avaliarCarga} className="flex flex-wrap items-end gap-3">
+                        <div>
+                            <label className="block text-sm text-gray-600 mb-1">Número da carga</label>
+                            <input
+                                className="border border-gray-200 rounded-lg px-3 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
+                                value={numeroCarga}
+                                onChange={(e) => setNumeroCarga(e.target.value)}
+                                inputMode="numeric"
+                                placeholder="ex: 27444"
+                                autoFocus
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={!numeroCarga || carregandoAvaliacao}
+                            className="bg-lassa-azul hover:bg-lassa-profundo transition-colors text-white rounded-lg px-4 py-2 disabled:opacity-50"
+                        >
+                            {carregandoAvaliacao ? 'Avaliando...' : 'Avaliar'}
+                        </button>
+                    </form>
+
+                    {erroAvaliacao && <p className="text-lassa-vermelho text-sm">{erroAvaliacao}</p>}
+
+                    {avaliacao && (
+                        <div className="divide-y border-t">
+                            {avaliacao.cidades.map((c, idx) => (
+                                <div key={idx} className="py-3 flex items-center justify-between gap-3 flex-wrap">
+                                    <div>
+                                        <p className="font-semibold text-gray-800">
+                                            {c.cidadeNome}{c.uf ? `/${c.uf}` : ''}
+                                            <span className="ml-2 text-sm text-gray-400 font-normal">
+                                                {c.totalClientes} cliente(s) · {c.totalNotas} nota(s)
+                                            </span>
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            Valor total: R$ {c.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            {c.distanciaKm != null && ` · ${c.distanciaKm} km de Sobral · mínimo R$ ${c.minimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                        </p>
+                                        {c.semGps && (
+                                            <p className="text-sm text-yellow-700">Sem GPS nos clientes dessa cidade — não dá pra calcular a distância.</p>
+                                        )}
+                                    </div>
+                                    {c.atingiuMinimo != null && (
+                                        <span className={`text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap ${
+                                            c.atingiuMinimo ? 'bg-green-100 text-green-800' : 'bg-lassa-vermelho/10 text-lassa-vermelho'
+                                        }`}>
+                                            {c.atingiuMinimo
+                                                ? `Bate — passou R$ ${c.diferenca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                                : `Não bate — falta R$ ${Math.abs(c.diferenca).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+
                 <section className="bg-white rounded-xl shadow-sm p-5 space-y-4">
                     <div>
                         <p className="font-semibold text-gray-700">Calculadora: vale a pena entregar?</p>
