@@ -139,8 +139,13 @@ export default function Planejamento() {
                                             Valor total: R$ {c.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             {c.distanciaKm != null && ` · ${c.distanciaKm} km de Sobral · mínimo R$ ${c.minimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                         </p>
+                                        {c.gpsAproximado && (
+                                            <p className="text-xs text-yellow-700">
+                                                Nenhum cliente com GPS cadastrado — distância aproximada pelo centro da cidade, não pelo endereço exato.
+                                            </p>
+                                        )}
                                         {c.semGps && (
-                                            <p className="text-sm text-yellow-700">Sem GPS nos clientes dessa cidade — não dá pra calcular a distância.</p>
+                                            <p className="text-sm text-yellow-700">Não foi possível localizar essa cidade — não dá pra calcular a distância.</p>
                                         )}
                                     </div>
                                     {c.atingiuMinimo != null && (

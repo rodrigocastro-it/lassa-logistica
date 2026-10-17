@@ -78,7 +78,7 @@ router.get('/avaliar-carga/:caId', asyncHandler(async (req, res) => {
             return res.status(404).json({ erro: `Carga ${caId} não encontrada no WiBi.` });
         }
         const config = await obterConfigCusto();
-        const cidades = avaliarPorCidade(carga.vendas, config, origem);
+        const cidades = await avaliarPorCidade(carga.vendas, config, origem);
         res.json({ caId: carga.caId, status: carga.status, dataEntrega: carga.dataEntrega, cidades });
     } catch (err) {
         console.error('Erro ao avaliar carga:', err);

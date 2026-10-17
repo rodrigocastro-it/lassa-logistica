@@ -91,6 +91,14 @@ mostra "bate" ou "não bate, falta R$X" por cidade, direto na aba
 Planejamento de Carga. Essa é a parte que resolve de fato a dor relatada
 pelo Rodrigo (não é mais só uma calculadora manual).
 
+Quando nenhum cliente de uma cidade tem GPS cadastrado no WiBi (acontece,
+viu na prática com Santa Quitéria em 2026-10-17), o sistema geocodifica o
+nome da cidade (Nominatim/OpenStreetMap, gratuito, mesmo serviço do mapa)
+como aproximação do centro da cidade — marcado na tela como "GPS
+aproximado" pra não passar como se fosse o endereço exato do cliente.
+Resultado fica em cache (`cidades_geocodificadas`) pra não bater no
+serviço de novo pra mesma cidade.
+
 **Ainda não automatizado:**
 1. Como saber quais vendas já lançadas ainda **não foram colocadas em
    nenhuma carga** (hoje precisa saber o número da carga de antemão,
