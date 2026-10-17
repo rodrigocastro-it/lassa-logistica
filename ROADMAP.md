@@ -50,6 +50,19 @@ mínimo = distância até o cliente (km, só ida) × fator_ida_volta × custo_km
 
 Exemplo dado: 15km × 2 × 5 × 10 = R$ 1.500.
 
+Confirmado também: o custo por km (`custo_km_caminhao`) e a margem são
+fixos pra qualquer caminhão/região — não variam por tipo de veículo (pode
+ser questionado no futuro, mas hoje é assim que a diretoria calcula).
+
+Desvio de rota confirmado com exemplo real: saindo de Sobral pra entregar
+Miraíma e Itapipoca (rota de ~100km), surgiu uma entrega em Amontada no
+meio do caminho — a rota virou Sobral → Miraíma → Amontada → Itapipoca,
+com +17km no total. Esse é exatamente o caso que `calcularCustoDesvio`
+calcula (inserir B entre A e C). Existe um caso raro, ainda não tratado,
+de desvio "sem saída" (A → B → volta pra A → C, quando B não conecta com
+o próximo ponto) — combinado que não vale a pena complicar o modelo por
+causa disso agora, é raro demais.
+
 Implementado (nova aba "Planejamento de Carga", separada do acompanhamento
 de entregas, em `/dashboard/planejamento`):
 - `config_custo_logistico` (tabela, singleton): guarda `custo_km_caminhao`,
