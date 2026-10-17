@@ -99,6 +99,39 @@ aproximado" pra não passar como se fosse o endereço exato do cliente.
 Resultado fica em cache (`cidades_geocodificadas`) pra não bater no
 serviço de novo pra mesma cidade.
 
+## Mínimos reais da empresa (importado em 2026-10-17/18)
+
+O Rodrigo passou a folha de rotas que a empresa já usa na prática, com os
+mínimos pré-definidos com a diretoria pra cada rota/cidade/distrito — isso
+é informação real, não mais uma estimativa por distância. Gravado em três
+tabelas novas: `rotas` (mínimo base de cada rota, e o "pode ser a partir
+de" quando existe), `rotas_combinacoes` (mínimo de uma combinação
+específica de cidades dentro da rota, ex: "Itapipoca + Miraíma +
+Amontada" = R$11.800) e `rotas_paradas_minimas` (mínimo de uma parada
+específica dentro da rota, ex: "Tangente" dentro de Massapê = R$1.400).
+
+`rotasConhecidasService.buscarMinimoConhecido(nomeCidade)` procura nessa
+ordem: parada específica → combinação que contenha o nome → mínimo base
+da rota. Se achar, esse é o mínimo usado na avaliação (tem prioridade
+sobre o cálculo por distância, que vira só um retrocesso genérico quando
+não existe valor real cadastrado pra aquela cidade).
+
+Testado rodando as migrações contra um Postgres local antes de ir pra
+produção — bateu certinho com os valores confirmados.
+
+**Pendências explícitas, não resolvidas ainda (não adivinhar):**
+- Taperuaba / "Bilheira": a folha tem dois valores diferentes pro mesmo
+  lugar (R$1.000 numa linha, "Somente Bilheira — R$4.400,00" escrito
+  à parte embaixo). Gravado R$1.000 por enquanto (foi o valor confirmado
+  explicitamente), com observação no banco sinalizando o conflito. Falta
+  o Rodrigo esclarecer se o R$4.400 substitui ou é outra coisa.
+- Cronograma de dias (segunda folha, com motoristas e caminhões): ainda
+  não gravado. A leitura por foto gerou dúvida (rotas que pegam mais de
+  um dia, ex: Marco/Bela Cruz/Cruz/Jijoca/Preá/Aranaú = terça E quarta).
+  Combinado que o Rodrigo manda uma versão mais simples (só rota → dia,
+  sem motorista/caminhão) antes de implementar, pra não interpretar
+  errado um cronograma real da empresa.
+
 **Ainda não automatizado:**
 1. Como saber quais vendas já lançadas ainda **não foram colocadas em
    nenhuma carga** (hoje precisa saber o número da carga de antemão,

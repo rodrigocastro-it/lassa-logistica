@@ -11,6 +11,7 @@ const {
 } = require('../services/custoLogisticoService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
 const { getCargaParaAvaliacao } = require('../services/wibiCargaService');
+const { listarRotas } = require('../services/rotasConhecidasService');
 
 const router = express.Router();
 
@@ -84,6 +85,10 @@ router.get('/avaliar-carga/:caId', asyncHandler(async (req, res) => {
         console.error('Erro ao avaliar carga:', err);
         res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
     }
+}));
+
+router.get('/rotas-conhecidas', asyncHandler(async (req, res) => {
+    res.json(await listarRotas());
 }));
 
 router.get('/regioes', asyncHandler(async (req, res) => {

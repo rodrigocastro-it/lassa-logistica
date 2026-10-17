@@ -1,6 +1,7 @@
 const { pool } = require('../db/pg');
 const { distanciaHaversineKm } = require('./routeOptimizer');
 const { geocodificarCidade } = require('./geocodificacaoService');
+const { buscarMinimoConhecido } = require('./rotasConhecidasService');
 
 /**
  * Calcula se uma entrega "vale a pena" com base na distância até o cliente.
@@ -60,6 +61,11 @@ function calcularCustoDesvio(pontoA, pontoB, pontoC) {
  * da cidade por geocodificação (nome da cidade, não o endereço exato do
  * cliente) como aproximação -- é melhor que não calcular nada, mas fica
  * marcado como `gpsAproximado: true` pra não passar como se fosse exato.
+ *
+ * Se existir um mínimo REAL cadastrado (folha de rotas da empresa, ver
+ * `rotasConhecidasService`), ele tem prioridade sobre o mínimo calculado
+ * por distância -- é o valor que a diretoria já negociou de verdade, o
+ * cálculo por distância é só uma estimativa genérica de reserva.
  */
 async function avaliarPorCidade(vendas, config, origem) {
     const porCidade = new Map();
@@ -93,9 +99,18 @@ async function avaliarPorCidade(vendas, config, origem) {
             gpsAproximado = !!ponto;
         }
 
-        if (ponto) {
+        const conhecido = await buscarMinimoConhecido(grupo.cidadeNome);
+
+        if (conhecido) {
+            minimo = conhecido.minimo;
+        } else if (ponto) {
             distanciaKm = distanciaHaversineKm(origem.lat, origem.lng, ponto.lat, ponto.lng);
             minimo = calcularMinimo(distanciaKm, config);
+        }
+        if (ponto) {
+            distanciaKm = distanciaHaversineKm(origem.lat, origem.lng, ponto.lat, ponto.lng);
+        }
+        if (minimo != null) {
             diferenca = valorTotal - minimo;
             atingiuMinimo = diferenca >= 0;
         }
@@ -108,10 +123,11 @@ async function avaliarPorCidade(vendas, config, origem) {
             valorTotal: Number(valorTotal.toFixed(2)),
             distanciaKm: distanciaKm != null ? Number(distanciaKm.toFixed(2)) : null,
             minimo: minimo != null ? Number(minimo.toFixed(2)) : null,
+            fonteMinimo: conhecido ? conhecido.fonte : (minimo != null ? 'calculado por distância' : null),
             diferenca: diferenca != null ? Number(diferenca.toFixed(2)) : null,
             atingiuMinimo,
             gpsAproximado,
-            semGps: !ponto,
+            semGps: !ponto && !conhecido,
             vendas: grupo.vendas
         });
     }

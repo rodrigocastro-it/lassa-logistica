@@ -137,15 +137,23 @@ export default function Planejamento() {
                                         </p>
                                         <p className="text-sm text-gray-600">
                                             Valor total: R$ {c.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            {c.distanciaKm != null && ` · ${c.distanciaKm} km de Sobral · mínimo R$ ${c.minimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                            {c.distanciaKm != null && ` · ${c.distanciaKm} km de Sobral`}
+                                            {c.minimo != null && ` · mínimo R$ ${c.minimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                         </p>
+                                        {c.fonteMinimo && (
+                                            <p className="text-xs text-gray-400">
+                                                {c.fonteMinimo === 'calculado por distância'
+                                                    ? 'mínimo calculado por distância (sem valor real cadastrado pra essa rota)'
+                                                    : `mínimo real cadastrado — ${c.fonteMinimo}`}
+                                            </p>
+                                        )}
                                         {c.gpsAproximado && (
                                             <p className="text-xs text-yellow-700">
                                                 Nenhum cliente com GPS cadastrado — distância aproximada pelo centro da cidade, não pelo endereço exato.
                                             </p>
                                         )}
                                         {c.semGps && (
-                                            <p className="text-sm text-yellow-700">Não foi possível localizar essa cidade — não dá pra calcular a distância.</p>
+                                            <p className="text-sm text-yellow-700">Sem mínimo cadastrado e sem GPS pra calcular por distância.</p>
                                         )}
                                     </div>
                                     {c.atingiuMinimo != null && (

@@ -62,5 +62,6 @@ export const api = {
         request(`/planejamento/regioes/${id}`, { method: 'PATCH', body: dados, auth: false }),
     removerRegiao: (id) =>
         request(`/planejamento/regioes/${id}`, { method: 'DELETE', auth: false }),
-    avaliarCarga: (caId) => request(`/planejamento/avaliar-carga/${caId}`, { auth: false })
+    avaliarCarga: (caId) => request(`/planejamento/avaliar-carga/${caId}`, { auth: false }),
+    listarRotasConhecidas: () => request('/planejamento/rotas-conhecidas', { auth: false })
 };
