@@ -43,18 +43,24 @@ export default function Login() {
 
                 <div className="space-y-3">
                     <input
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lassa-leve lowercase"
                         placeholder="Usuário"
                         value={usuario}
-                        onChange={(e) => setUsuario(e.target.value)}
+                        onChange={(e) => setUsuario(e.target.value.toLowerCase())}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck="false"
                         autoFocus
                     />
                     <input
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lassa-leve lowercase"
                         placeholder="Senha"
                         type="password"
                         value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
+                        onChange={(e) => setSenha(e.target.value.toLowerCase())}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck="false"
                     />
                 </div>
 
