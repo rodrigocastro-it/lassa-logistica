@@ -129,6 +129,29 @@ o valor certo sozinho, baseado em a carga avaliada ter só essa cidade ou
 vir acompanhada de outras da mesma rota. Testado de novo contra Postgres
 local antes de subir.
 
+**Bug corrigido em 2026-10-21:** o Rodrigo avaliou uma carga real e todas
+as cidades vieram "Não bate" — até cidades de rotas já consolidadas e
+lucrativas (ex: Camocim, Senador Sá/Uruoca/Martinópole/Granja). Causa: o
+WiBi trata cada distrito/localidade como uma "cidade" separada (ex:
+"Maceió (Camocim)", "Barroquinha", "Chaval" aparecem como três cidades
+diferentes), e a avaliação julgava cada uma isoladamente contra o mínimo
+da rota inteira, em vez de somar todas as localidades da mesma rota antes
+de comparar. Corrigido: `avaliarPorCidade` agora identifica a qual rota
+cadastrada cada localidade pertence (`identificarRotaPorNome`, nova
+função) e agrupa por rota antes de julgar "bate"/"não bate" — localidades
+sem rota cadastrada continuam avaliadas sozinhas pelo cálculo de
+distância, como antes. Também corrigido um bug de correspondência: o WiBi
+usa o formato "X (Y)" (Y = município oficial da localidade X), e a busca
+antiga não lidava com esse sufixo — agora `rotasConhecidasService` separa
+core/parent do nome e tenta o município (mais confiável) antes do nome da
+localidade. De quebra, corrigida uma digitação minha: `'Santa Tereziinha'`
+→ `'Santa Terezinha'` (migração 008), pra bater com o nome real do WiBi.
+Validado rodando os dois clusters reais que o Rodrigo mandou (Camocim:
+R$11.921,55 contra mínimo R$10.000 = bate; Senador Sá/Uruoca/Martinópole/
+Granja: R$11.393,55 contra R$8.000 = bate; Massapê sozinho: R$255,60
+contra R$5.000 = não bate, como esperado) contra Postgres local antes de
+subir.
+
 **Pendências explícitas, não resolvidas ainda (não adivinhar):**
 - Cronograma de dias (segunda folha, com motoristas e caminhões): ainda
   não gravado. A leitura por foto gerou dúvida (rotas que pegam mais de

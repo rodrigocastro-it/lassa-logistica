@@ -1,7 +1,7 @@
 const { pool } = require('../db/pg');
 const { distanciaHaversineKm } = require('./routeOptimizer');
 const { geocodificarCidade } = require('./geocodificacaoService');
-const { buscarMinimoConhecido } = require('./rotasConhecidasService');
+const { identificarRotaPorNome, buscarMinimoDoGrupo } = require('./rotasConhecidasService');
 
 /**
  * Calcula se uma entrega "vale a pena" com base na distância até o cliente.
@@ -51,11 +51,19 @@ function calcularCustoDesvio(pontoA, pontoB, pontoC) {
 }
 
 /**
- * Agrupa as vendas de uma carga por cidade, soma o valor de cada grupo,
- * calcula a distância até lá (centróide dos clientes com GPS daquele
- * grupo, a partir da origem da Lassa) e o mínimo que o grupo precisa
- * somar pra compensar a viagem. Não decide nada sozinho -- só mostra o
- * número pra quem monta a carga decidir.
+ * Agrupa as vendas de uma carga por cidade/localidade do WiBi, soma o valor
+ * de cada grupo e calcula a distância até lá (centróide dos clientes com
+ * GPS daquele grupo, a partir da origem da Lassa).
+ *
+ * O WiBi trata cada distrito/localidade como uma "cidade" separada (ex:
+ * "Maceió (Camocim)", "Barroquinha" e "Chaval" aparecem como três cidades
+ * diferentes), mas na prática pertencem à mesma rota/viagem da empresa. Por
+ * isso, antes de julgar se bateu o mínimo, as localidades que pertencem à
+ * mesma rota cadastrada (ver `rotasConhecidasService`) são agrupadas e o
+ * valor somado é comparado contra o mínimo daquela rota -- senão toda
+ * localidade de uma rota já lucrativa aparece sozinha como "não bate".
+ * Localidades sem rota cadastrada continuam sendo avaliadas uma a uma pelo
+ * cálculo de distância, como antes.
  *
  * Se nenhum cliente do grupo tiver GPS cadastrado no WiBi, busca o centro
  * da cidade por geocodificação (nome da cidade, não o endereço exato do
@@ -77,20 +85,13 @@ async function avaliarPorCidade(vendas, config, origem) {
         porCidade.get(chave).vendas.push(venda);
     }
 
-    const umaUnicaCidade = porCidade.size === 1;
-
-    const resultados = [];
+    const localidades = [];
     for (const grupo of porCidade.values()) {
         const valorTotal = grupo.vendas.reduce((acc, v) => acc + v.valorTotal, 0);
         const comGps = grupo.vendas.filter((v) => v.latitude != null && v.longitude != null);
 
-        let distanciaKm = null;
-        let minimo = null;
-        let diferenca = null;
-        let atingiuMinimo = null;
-        let gpsAproximado = false;
-
         let ponto = null;
+        let gpsAproximado = false;
         if (comGps.length > 0) {
             ponto = {
                 lat: comGps.reduce((acc, v) => acc + v.latitude, 0) / comGps.length,
@@ -101,36 +102,84 @@ async function avaliarPorCidade(vendas, config, origem) {
             gpsAproximado = !!ponto;
         }
 
-        const conhecido = await buscarMinimoConhecido(grupo.cidadeNome, { sozinho: umaUnicaCidade });
+        const distanciaKm = ponto ? distanciaHaversineKm(origem.lat, origem.lng, ponto.lat, ponto.lng) : null;
+        const rotaId = await identificarRotaPorNome(grupo.cidadeNome);
 
-        if (conhecido) {
-            minimo = conhecido.minimo;
-        } else if (ponto) {
-            distanciaKm = distanciaHaversineKm(origem.lat, origem.lng, ponto.lat, ponto.lng);
-            minimo = calcularMinimo(distanciaKm, config);
-        }
-        if (ponto) {
-            distanciaKm = distanciaHaversineKm(origem.lat, origem.lng, ponto.lat, ponto.lng);
-        }
-        if (minimo != null) {
-            diferenca = valorTotal - minimo;
-            atingiuMinimo = diferenca >= 0;
-        }
-
-        resultados.push({
+        localidades.push({
             cidadeNome: grupo.cidadeNome,
             uf: grupo.uf,
             totalClientes: new Set(grupo.vendas.map((v) => v.clCodigo)).size,
             totalNotas: grupo.vendas.length,
+            valorTotal,
+            distanciaKm,
+            gpsAproximado,
+            semGps: !ponto,
+            rotaId,
+            vendas: grupo.vendas
+        });
+    }
+
+    const porRota = new Map();
+    const semRota = [];
+    for (const loc of localidades) {
+        if (loc.rotaId != null) {
+            if (!porRota.has(loc.rotaId)) porRota.set(loc.rotaId, []);
+            porRota.get(loc.rotaId).push(loc);
+        } else {
+            semRota.push(loc);
+        }
+    }
+
+    const resultados = [];
+
+    for (const grupo of porRota.values()) {
+        const valorTotal = grupo.reduce((acc, l) => acc + l.valorTotal, 0);
+        const sozinho = grupo.length === 1;
+        const conhecido = await buscarMinimoDoGrupo(grupo[0].rotaId, grupo.map((l) => l.cidadeNome), { sozinho });
+        const minimo = conhecido ? conhecido.minimo : null;
+        const diferenca = minimo != null ? valorTotal - minimo : null;
+        const atingiuMinimo = diferenca != null ? diferenca >= 0 : null;
+        const multiplas = grupo.length > 1;
+
+        resultados.push({
+            cidadeNome: multiplas
+                ? (conhecido ? conhecido.rotaNome : grupo.map((l) => l.cidadeNome).join(' + '))
+                : grupo[0].cidadeNome,
+            uf: grupo[0].uf,
+            totalClientes: grupo.reduce((acc, l) => acc + l.totalClientes, 0),
+            totalNotas: grupo.reduce((acc, l) => acc + l.totalNotas, 0),
             valorTotal: Number(valorTotal.toFixed(2)),
-            distanciaKm: distanciaKm != null ? Number(distanciaKm.toFixed(2)) : null,
+            distanciaKm: !multiplas && grupo[0].distanciaKm != null ? Number(grupo[0].distanciaKm.toFixed(2)) : null,
             minimo: minimo != null ? Number(minimo.toFixed(2)) : null,
-            fonteMinimo: conhecido ? conhecido.fonte : (minimo != null ? 'calculado por distância' : null),
+            fonteMinimo: conhecido ? conhecido.fonte : null,
             diferenca: diferenca != null ? Number(diferenca.toFixed(2)) : null,
             atingiuMinimo,
-            gpsAproximado,
-            semGps: !ponto && !conhecido,
-            vendas: grupo.vendas
+            gpsAproximado: grupo.some((l) => l.gpsAproximado),
+            semGps: grupo.every((l) => l.semGps) && !conhecido,
+            localidadesIncluidas: multiplas ? grupo.map((l) => `${l.cidadeNome}${l.uf ? '/' + l.uf : ''}`) : undefined,
+            vendas: grupo.flatMap((l) => l.vendas)
+        });
+    }
+
+    for (const loc of semRota) {
+        const minimo = loc.distanciaKm != null ? calcularMinimo(loc.distanciaKm, config) : null;
+        const diferenca = minimo != null ? loc.valorTotal - minimo : null;
+        const atingiuMinimo = diferenca != null ? diferenca >= 0 : null;
+
+        resultados.push({
+            cidadeNome: loc.cidadeNome,
+            uf: loc.uf,
+            totalClientes: loc.totalClientes,
+            totalNotas: loc.totalNotas,
+            valorTotal: Number(loc.valorTotal.toFixed(2)),
+            distanciaKm: loc.distanciaKm != null ? Number(loc.distanciaKm.toFixed(2)) : null,
+            minimo: minimo != null ? Number(minimo.toFixed(2)) : null,
+            fonteMinimo: minimo != null ? 'calculado por distância' : null,
+            diferenca: diferenca != null ? Number(diferenca.toFixed(2)) : null,
+            atingiuMinimo,
+            gpsAproximado: loc.gpsAproximado,
+            semGps: loc.semGps,
+            vendas: loc.vendas
         });
     }
 

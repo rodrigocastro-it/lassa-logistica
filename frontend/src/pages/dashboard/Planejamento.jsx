@@ -135,6 +135,11 @@ export default function Planejamento() {
                                                 {c.totalClientes} cliente(s) · {c.totalNotas} nota(s)
                                             </span>
                                         </p>
+                                        {c.localidadesIncluidas && (
+                                            <p className="text-xs text-gray-500">
+                                                Rota agrupando: {c.localidadesIncluidas.join(', ')}
+                                            </p>
+                                        )}
                                         <p className="text-sm text-gray-600">
                                             Valor total: R$ {c.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             {c.distanciaKm != null && ` · ${c.distanciaKm} km de Sobral`}
