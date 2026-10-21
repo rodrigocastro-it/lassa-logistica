@@ -149,7 +149,16 @@ export default function Planejamento() {
                                             <p className="text-xs text-gray-400">
                                                 {c.fonteMinimo === 'calculado por distância'
                                                     ? 'mínimo calculado por distância (sem valor real cadastrado pra essa rota)'
+                                                    : c.fonteMinimo.startsWith('desvio pra entrar')
+                                                    ? c.fonteMinimo
                                                     : `mínimo real cadastrado — ${c.fonteMinimo}`}
+                                            </p>
+                                        )}
+                                        {c.distritosExcluidosPorDesvio && (
+                                            <p className="text-xs text-yellow-700">
+                                                Não compensa o desvio pra buscar: {c.distritosExcluidosPorDesvio
+                                                    .map((d) => `${d.cidadeNome} (desvio de ${d.desvioKm} km, precisaria de R$ ${d.minimoDesvio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`)
+                                                    .join('; ')}
                                             </p>
                                         )}
                                         {c.gpsAproximado && (

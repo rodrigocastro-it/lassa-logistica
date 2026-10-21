@@ -152,6 +152,56 @@ Granja: R$11.393,55 contra R$8.000 = bate; Massapê sozinho: R$255,60
 contra R$5.000 = não bate, como esperado) contra Postgres local antes de
 subir.
 
+**Refinado em 2026-10-21, segunda rodada:** mesmo com o agrupamento por
+rota corrigido, a Erileila apontou que juntar TUDO da rota e comparar
+contra o mínimo da rota inteira também está errado -- tem distritozinho
+pequeno que, sozinho, não justifica o desvio que o caminhão precisa fazer
+pra chegar lá, mesmo que o resto da rota compense. Ela foi clara: "se a
+gente colocar tudo junto o valor vai dar, mas quando a gente separa, não
+vale a pena o carro ir" -- e também que uma cidade pode ser "passagem"
+(no caminho, desvio praticamente zero, ex: Massapê indo pra Camocim) ou
+um desvio de verdade que precisa ser julgado sozinho.
+
+Implementado: dentro de uma rota, a cidade-sede (nome sem parênteses, ex:
+"Camocim", "Barroquinha") sempre entra na conta -- é parada obrigatória.
+Já os distritos (formato "X (Y)" do WiBi, ex: "Maceió (Camocim)") são
+testados um a um: monta a cadeia Sobral → cidades-sede em sequência
+(mesma otimização usada pra montar rota de verdade, `routeOptimizer.
+otimizarSequencia`) → Sobral, e calcula o desvio de inserir cada distrito
+no trecho mais barato dessa cadeia (`dist(A,distrito)+dist(distrito,B)-
+dist(A,B)`, a mesma fórmula de desvio já confirmada lá no Passo 3). O
+mínimo desse distrito é só o custo do desvio (sem o fator ida-e-volta,
+que é só pra viagem dedicada) -- se o valor dele não cobrir, ele é
+cortado da carga e aparece como item separado na tela (a venda não some,
+só não compensa ir buscar agora). Se a rota não tiver nenhuma cidade-sede
+com coordenada (só distritos, sem nenhum ponto de referência pra montar a
+cadeia), cai no comportamento anterior (todo mundo somado contra o
+mínimo da rota, sem teste de desvio individual) -- não dá pra montar
+cadeia sem inventar sequência.
+
+Também corrigido, durante os testes, um bug onde o ponto geográfico de
+cada cidade calculado (`ponto`) não estava sendo guardado no objeto da
+localidade -- fazia o teste de desvio nunca rodar de verdade (sempre
+caía como "sem coordenada"), mascarado porque o resultado final parecia
+certo mesmo assim nos casos testados antes.
+
+Validado com cenários sintéticos (coordenadas aproximadas, só pra testar
+a lógica) contra Postgres local: distrito perto da rota principal (ex:
+"Mucambo (Chaval)" a 0,09km de desvio) é incluído de graça; distrito
+simulado bem longe do caminho (350km de desvio) é cortado corretamente e
+aparece como item isolado "não compensa o desvio". Falta validar com
+coordenadas/GPS reais de clientes quando a próxima carga real for
+avaliada.
+
+**Ainda não resolvido (fora do escopo de hoje, avisado ao Rodrigo):** o
+caso de uma localidade de uma rota "pegar carona" no caminho de OUTRA
+rota (ex: Massapê, que é uma rota própria com mínimo R$5.000, mas fica no
+caminho físico pra Camocim) -- hoje cada rota nomeada ainda é agrupada e
+avaliada isoladamente das outras. Resolver isso exigiria cruzar rotas
+diferentes geograficamente, o que é uma mudança maior; fica pra uma
+próxima rodada se a Erileila confirmar que isso acontece com frequência
+suficiente pra valer a pena.
+
 **Pendências explícitas, não resolvidas ainda (não adivinhar):**
 - Cronograma de dias (segunda folha, com motoristas e caminhões): ainda
   não gravado. A leitura por foto gerou dúvida (rotas que pegam mais de
