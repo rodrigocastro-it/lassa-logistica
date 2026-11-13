@@ -69,13 +69,39 @@ router.get('/:id', asyncHandler(async (req, res) => {
     res.json({ ...cargaResult.rows[0], paradas: paradasResult.rows });
 }));
 
+// Registra a saída real (hodômetro do caminhão) -- pedido da Zuleika em
+// 2026-11-13 pra medir km da saída na reunião semanal de acompanhamento.
+// Não dá pra capturar isso automaticamente, o motorista digita a leitura
+// do hodômetro ao sair. Idempotente (COALESCE): reabrir a mesma carga no
+// app não sobrescreve o horário/km já registrado.
+router.patch('/:id/saida', asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const hodometroKm = req.body.hodometroKm != null ? Number(req.body.hodometroKm) : null;
+    if (hodometroKm == null || Number.isNaN(hodometroKm)) {
+        return res.status(400).json({ erro: 'Informe a leitura do hodômetro.' });
+    }
+    const result = await pool.query(
+        `UPDATE cargas
+         SET saida_em = COALESCE(saida_em, now()),
+             saida_hodometro_km = COALESCE(saida_hodometro_km, $1)
+         WHERE id = $2 AND motorista_id = $3
+         RETURNING *`,
+        [hodometroKm, id, req.motorista.id]
+    );
+    if (result.rows.length === 0) {
+        return res.status(404).json({ erro: 'Carga não encontrada.' });
+    }
+    res.json(result.rows[0]);
+}));
+
 // Encerra a carga atual (libera o motorista pra carregar outra em /rota).
 // Não exige que todas as paradas estejam concluídas — o motorista pode
-// precisar encerrar mesmo com pendências/problemas registrados.
+// precisar encerrar mesmo com pendências/problemas registrados. Também
+// registra o retorno (chegada de volta na empresa) pra reunião semanal.
 router.patch('/:id/finalizar', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const result = await pool.query(
-        `UPDATE cargas SET status = 'finalizada', atualizado_em = now()
+        `UPDATE cargas SET status = 'finalizada', retorno_em = now(), atualizado_em = now()
          WHERE id = $1 AND motorista_id = $2
          RETURNING *`,
         [id, req.motorista.id]

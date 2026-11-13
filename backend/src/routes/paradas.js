@@ -7,12 +7,13 @@ const { asyncHandler } = require('../middleware/asyncHandler');
 const router = express.Router();
 router.use(autenticar);
 
-const STATUS_VALIDOS = ['pendente', 'chegada', 'inicio', 'fim', 'problema'];
+const STATUS_VALIDOS = ['pendente', 'chegada', 'inicio', 'fim', 'problema', 'nao_entregue'];
 const COLUNA_TIMESTAMP = {
     chegada: 'chegada_em',
     inicio: 'inicio_em',
     fim: 'fim_em',
-    problema: 'problema_em'
+    problema: 'problema_em',
+    nao_entregue: 'nao_entregue_em'
 };
 
 // Monta o SET da atualização de status. Na "chegada" especificamente,
@@ -21,7 +22,13 @@ const COLUNA_TIMESTAMP = {
 // endereço do cliente no WiBi. Isso é best-effort: se a Point Track falhar
 // ou o veículo não tiver correspondência, a marcação acontece do mesmo
 // jeito, só sem o GPS.
-async function montarAtualizacaoStatus(status, problemaDescricao, placa) {
+//
+// "problema" (algo deu errado durante a entrega) e "nao_entregue" (o
+// pedido simplesmente não foi deixado e voltou no caminhão) são duas
+// coisas diferentes (confirmado com o Rodrigo em 2026-11-13, pedido da
+// Zuleika pra medir efetividade da rota) -- cada uma com seu próprio
+// motivo/descrição e timestamp.
+async function montarAtualizacaoStatus(status, problemaDescricao, naoEntregueMotivo, placa) {
     const colunaTimestamp = COLUNA_TIMESTAMP[status];
     const sets = ['status = $1'];
     const valores = [status];
@@ -32,6 +39,10 @@ async function montarAtualizacaoStatus(status, problemaDescricao, placa) {
     if (status === 'problema') {
         sets.push(`problema_descricao = $${valores.length + 1}`);
         valores.push(problemaDescricao);
+    }
+    if (status === 'nao_entregue') {
+        sets.push(`nao_entregue_motivo = $${valores.length + 1}`);
+        valores.push(naoEntregueMotivo);
     }
     if (status === 'chegada' && placa) {
         try {
@@ -47,13 +58,17 @@ async function montarAtualizacaoStatus(status, problemaDescricao, placa) {
     return { sets, valores };
 }
 
-function validarStatus(status, problemaDescricao, res) {
+function validarStatus(status, problemaDescricao, naoEntregueMotivo, res) {
     if (!STATUS_VALIDOS.includes(status)) {
         res.status(400).json({ erro: `Status inválido. Use um de: ${STATUS_VALIDOS.join(', ')}` });
         return false;
     }
     if (status === 'problema' && !problemaDescricao) {
         res.status(400).json({ erro: 'Descreva o problema.' });
+        return false;
+    }
+    if (status === 'nao_entregue' && !naoEntregueMotivo) {
+        res.status(400).json({ erro: 'Descreva o motivo de não ter entregado.' });
         return false;
     }
     return true;
@@ -71,11 +86,11 @@ function validarStatus(status, problemaDescricao, res) {
 // palavra "grupo" como se fosse um id numérico (e quebrando com erro de
 // tipo no Postgres).
 router.patch('/grupo/status', asyncHandler(async (req, res) => {
-    const { paradaIds, status, problemaDescricao } = req.body;
+    const { paradaIds, status, problemaDescricao, naoEntregueMotivo } = req.body;
     if (!Array.isArray(paradaIds) || paradaIds.length === 0) {
         return res.status(400).json({ erro: 'Informe paradaIds (lista de ids).' });
     }
-    if (!validarStatus(status, problemaDescricao, res)) return;
+    if (!validarStatus(status, problemaDescricao, naoEntregueMotivo, res)) return;
 
     const ids = paradaIds.map((v) => parseInt(v, 10));
     const dono = await pool.query(
@@ -89,7 +104,7 @@ router.patch('/grupo/status', asyncHandler(async (req, res) => {
         return res.status(404).json({ erro: 'Paradas não encontradas.' });
     }
 
-    const { sets, valores } = await montarAtualizacaoStatus(status, problemaDescricao, dono.rows[0].veiculo_placa);
+    const { sets, valores } = await montarAtualizacaoStatus(status, problemaDescricao, naoEntregueMotivo, dono.rows[0].veiculo_placa);
     valores.push(ids);
     const result = await pool.query(
         `UPDATE paradas SET ${sets.join(', ')} WHERE id = ANY($${valores.length}) RETURNING *`,
@@ -103,8 +118,8 @@ router.patch('/grupo/status', asyncHandler(async (req, res) => {
 // em horário do dispositivo).
 router.patch('/:id/status', asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
-    const { status, problemaDescricao } = req.body;
-    if (!validarStatus(status, problemaDescricao, res)) return;
+    const { status, problemaDescricao, naoEntregueMotivo } = req.body;
+    if (!validarStatus(status, problemaDescricao, naoEntregueMotivo, res)) return;
 
     const dono = await pool.query(
         `SELECT c.veiculo_placa
@@ -117,7 +132,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
         return res.status(404).json({ erro: 'Parada não encontrada.' });
     }
 
-    const { sets, valores } = await montarAtualizacaoStatus(status, problemaDescricao, dono.rows[0].veiculo_placa);
+    const { sets, valores } = await montarAtualizacaoStatus(status, problemaDescricao, naoEntregueMotivo, dono.rows[0].veiculo_placa);
     valores.push(id);
     const result = await pool.query(
         `UPDATE paradas SET ${sets.join(', ')} WHERE id = $${valores.length} RETURNING *`,

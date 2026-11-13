@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pg');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { montarOuObterRota } = require('../services/montarRotaService');
-const { getCargaByNumero, listarCargasAbertas, listarCargasEmEntrega } = require('../services/wibiCargaService');
+const { getCargaByNumero, listarCargasAbertas, listarCargasEmEntrega, getCargaParaAvaliacao } = require('../services/wibiCargaService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
 const { asyncHandler } = require('../middleware/asyncHandler');
 
@@ -205,6 +205,118 @@ router.patch('/rotas/:id/sincronizar-veiculo', asyncHandler(async (req, res) => 
         console.error('Erro ao sincronizar veículo com o WiBi:', err);
         res.status(502).json({ erro: 'Falha ao consultar o WiBi.' });
     }
+}));
+
+// Define o dia/horário PROGRAMADO de saída e chegada -- quem monta a carga
+// (Jacineuda/Nina) digita a meta, pra comparar depois com o real na
+// reunião semanal de acompanhamento (pedido da Zuleika em 2026-11-11).
+router.patch('/rotas/:id/programado', asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { programadoSaidaEm, programadoChegadaEm } = req.body;
+
+    const result = await pool.query(
+        `UPDATE cargas
+         SET programado_saida_em = COALESCE($1, programado_saida_em),
+             programado_chegada_em = COALESCE($2, programado_chegada_em),
+             atualizado_em = now()
+         WHERE id = $3
+         RETURNING *`,
+        [programadoSaidaEm || null, programadoChegadaEm || null, id]
+    );
+    if (result.rows.length === 0) {
+        return res.status(404).json({ erro: 'Rota não encontrada.' });
+    }
+    res.json(result.rows[0]);
+}));
+
+// Indicadores pra reunião semanal de acompanhamento de entregas (pedido da
+// Zuleika em 2026-11-11, alinhado com a Roberta): uma linha por carga, com
+// rota/motorista/placa, programado x real de saída e chegada, quantos
+// pedidos, ocorrências e pedidos não entregues. As "cidades da rota" vêm
+// direto do WiBi (mesmo serviço do Planejamento de Carga) -- se o WiBi
+// falhar pra uma carga específica, essa carga ainda aparece no relatório,
+// só sem a lista de cidades (best-effort, não derruba o relatório inteiro).
+async function montarIndicadores(inicio, fim) {
+    const cargasResult = await pool.query(
+        `SELECT c.id, c.wibi_ca_id, c.data_entrega, c.veiculo_placa,
+                m.nome AS motorista_nome,
+                c.programado_saida_em, c.saida_em, c.saida_hodometro_km,
+                c.programado_chegada_em, c.retorno_em,
+                COUNT(p.id) AS total_notas,
+                COUNT(p.id) FILTER (WHERE p.status = 'problema') AS total_ocorrencias,
+                COUNT(p.id) FILTER (WHERE p.status = 'nao_entregue') AS total_nao_entregues,
+                array_remove(array_agg(p.problema_descricao) FILTER (WHERE p.status = 'problema'), NULL) AS ocorrencias,
+                array_remove(array_agg(p.nao_entregue_motivo) FILTER (WHERE p.status = 'nao_entregue'), NULL) AS motivos_nao_entregues
+         FROM cargas c
+         LEFT JOIN motoristas m ON m.id = c.motorista_id
+         LEFT JOIN paradas p ON p.carga_id = c.id
+         WHERE c.data_entrega BETWEEN $1 AND $2
+         GROUP BY c.id, m.nome
+         ORDER BY c.data_entrega DESC, c.id DESC`,
+        [inicio, fim]
+    );
+
+    const linhas = [];
+    for (const carga of cargasResult.rows) {
+        let cidades = [];
+        try {
+            const cargaWibi = await getCargaParaAvaliacao(carga.wibi_ca_id);
+            cidades = [...new Set((cargaWibi?.vendas || []).map((v) => v.cidadeNome).filter(Boolean))];
+        } catch (err) {
+            console.error(`Erro ao buscar cidades da carga ${carga.wibi_ca_id} no WiBi:`, err);
+        }
+        linhas.push({ ...carga, cidades });
+    }
+    return linhas;
+}
+
+router.get('/indicadores', asyncHandler(async (req, res) => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const inicio = req.query.inicio || seteDiasAtras;
+    const fim = req.query.fim || hoje;
+    res.json(await montarIndicadores(inicio, fim));
+}));
+
+router.get('/indicadores/exportar', asyncHandler(async (req, res) => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const inicio = req.query.inicio || seteDiasAtras;
+    const fim = req.query.fim || hoje;
+    const linhas = await montarIndicadores(inicio, fim);
+
+    const escapar = (v) => String(v ?? '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+    const dataHora = (v) => (v ? new Date(v).toLocaleString('pt-BR') : '');
+    const csv = [
+        [
+            'Carga', 'Data entrega', 'Rota (cidades)', 'Placa', 'Motorista',
+            'Saída programada', 'Saída real', 'Hodômetro saída',
+            'Chegada programada', 'Retorno real',
+            'Pedidos (notas)', 'Ocorrências', 'Quais ocorrências',
+            'Não entregues', 'Motivos'
+        ].join(';'),
+        ...linhas.map((l) => [
+            l.wibi_ca_id,
+            l.data_entrega ? new Date(l.data_entrega).toLocaleDateString('pt-BR') : '',
+            escapar(l.cidades.join(', ')),
+            escapar(l.veiculo_placa),
+            escapar(l.motorista_nome),
+            dataHora(l.programado_saida_em),
+            dataHora(l.saida_em),
+            l.saida_hodometro_km ?? '',
+            dataHora(l.programado_chegada_em),
+            dataHora(l.retorno_em),
+            l.total_notas,
+            l.total_ocorrencias,
+            escapar((l.ocorrencias || []).join(' | ')),
+            l.total_nao_entregues,
+            escapar((l.motivos_nao_entregues || []).join(' | '))
+        ].join(';'))
+    ];
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="indicadores-entrega-${inicio}-a-${fim}.csv"`);
+    res.send(`﻿${csv.join('\n')}`);
 }));
 
 router.get('/rotas/:id/posicao', asyncHandler(async (req, res) => {

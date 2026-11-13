@@ -12,7 +12,8 @@ const STATUS_COR = {
     chegada: 'bg-yellow-100 text-yellow-800',
     inicio: 'bg-lassa-leve/20 text-lassa-profundo',
     fim: 'bg-green-100 text-green-800',
-    problema: 'bg-lassa-vermelho/10 text-lassa-vermelho'
+    problema: 'bg-lassa-vermelho/10 text-lassa-vermelho',
+    nao_entregue: 'bg-gray-700/10 text-gray-700'
 };
 
 export default function RotaDoDia() {
@@ -20,6 +21,8 @@ export default function RotaDoDia() {
     const [numeroCarga, setNumeroCarga] = useState('');
     const [carregando, setCarregando] = useState(false);
     const [erro, setErro] = useState('');
+    const [hodometro, setHodometro] = useState('');
+    const [salvandoSaida, setSalvandoSaida] = useState(false);
     const { logout } = useAuth();
     const { cargaAtualId, setCargaAtualId } = useCargaAtual();
     const navigate = useNavigate();
@@ -48,6 +51,19 @@ export default function RotaDoDia() {
         }
         setCarga(null);
         setCargaAtualId(null);
+    }
+
+    async function handleRegistrarSaida(e) {
+        e.preventDefault();
+        setSalvandoSaida(true);
+        try {
+            await api.registrarSaida(carga.id, parseFloat(hodometro.replace(',', '.')));
+            await carregarDetalhe(carga.id);
+        } catch (err) {
+            setErro(err.message);
+        } finally {
+            setSalvandoSaida(false);
+        }
     }
 
     async function handleBuscarCarga(e) {
@@ -90,6 +106,38 @@ export default function RotaDoDia() {
                     </button>
                     <button type="button" onClick={logout} className="w-full text-sm text-gray-400">
                         Sair
+                    </button>
+                </form>
+            </div>
+        );
+    }
+
+    if (!carga.saida_em) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-b from-lassa-leve/10 to-lassa-branco">
+                <form onSubmit={handleRegistrarSaida} className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm space-y-5">
+                    <div className="flex justify-center">
+                        <LogoLassa className="h-12" />
+                    </div>
+                    <h1 className="text-base font-semibold text-gray-700 text-center">Registrar saída</h1>
+                    <p className="text-sm text-gray-500 text-center">
+                        Antes de começar a carga #{carga.wibi_ca_id}, digite a leitura do hodômetro do caminhão.
+                    </p>
+                    <input
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
+                        placeholder="Km do hodômetro"
+                        value={hodometro}
+                        onChange={(e) => setHodometro(e.target.value)}
+                        inputMode="decimal"
+                        autoFocus
+                    />
+                    {erro && <p className="text-lassa-vermelho text-sm text-center">{erro}</p>}
+                    <button
+                        type="submit"
+                        disabled={salvandoSaida || !hodometro}
+                        className="w-full bg-lassa-azul hover:bg-lassa-profundo transition-colors text-white rounded-lg py-2.5 font-medium disabled:opacity-50"
+                    >
+                        {salvandoSaida ? 'Salvando...' : 'Confirmar saída'}
                     </button>
                 </form>
             </div>

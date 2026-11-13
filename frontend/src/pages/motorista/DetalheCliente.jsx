@@ -26,6 +26,12 @@ const ICONE = {
             <path d="M12 17h.01" />
             <path d="M10.3 3.9L2.7 17a2 2 0 001.7 3h15.2a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />
         </svg>
+    ),
+    nao_entregue: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 14l-4-4 4-4" />
+            <path d="M5 10h11a4 4 0 010 8h-1" />
+        </svg>
     )
 };
 
@@ -34,6 +40,8 @@ export default function DetalheCliente() {
     const [notas, setNotas] = useState(null);
     const [mostrarProblema, setMostrarProblema] = useState(false);
     const [descricaoProblema, setDescricaoProblema] = useState('');
+    const [mostrarNaoEntregue, setMostrarNaoEntregue] = useState(false);
+    const [motivoNaoEntregue, setMotivoNaoEntregue] = useState('');
     const [erro, setErro] = useState('');
     const navigate = useNavigate();
 
@@ -48,12 +56,13 @@ export default function DetalheCliente() {
         setNotas(doCliente);
     }
 
-    async function marcar(status, problemaDescricao) {
+    async function marcar(status, problemaDescricao, naoEntregueMotivo) {
         setErro('');
         try {
-            await api.atualizarStatusGrupo(notas.map((n) => n.id), status, problemaDescricao);
+            await api.atualizarStatusGrupo(notas.map((n) => n.id), status, problemaDescricao, naoEntregueMotivo);
             await carregar();
             setMostrarProblema(false);
+            setMostrarNaoEntregue(false);
         } catch (err) {
             setErro(err.message);
         }
@@ -139,6 +148,12 @@ export default function DetalheCliente() {
                 >
                     {ICONE.problema} Problema
                 </button>
+                <button
+                    onClick={() => setMostrarNaoEntregue(true)}
+                    className="col-span-2 bg-gray-600 hover:bg-gray-700 transition-colors text-white rounded-xl py-3 font-medium flex items-center justify-center gap-2"
+                >
+                    {ICONE.nao_entregue} Não entreguei, voltou com o pedido
+                </button>
             </div>
 
             {mostrarProblema && (
@@ -161,6 +176,26 @@ export default function DetalheCliente() {
                 </div>
             )}
 
+            {mostrarNaoEntregue && (
+                <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+                    <textarea
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lassa-leve"
+                        placeholder="Por que não entregou? (ex: cliente recusou, estabelecimento fechado...)"
+                        value={motivoNaoEntregue}
+                        onChange={(e) => setMotivoNaoEntregue(e.target.value)}
+                        rows={3}
+                        autoFocus
+                    />
+                    <button
+                        onClick={() => marcar('nao_entregue', null, motivoNaoEntregue)}
+                        disabled={!motivoNaoEntregue}
+                        className="w-full bg-gray-700 text-white rounded-lg py-2 disabled:opacity-50"
+                    >
+                        Confirmar não entregue
+                    </button>
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm p-4 text-sm text-gray-600 space-y-1">
                 <p>Status atual: <strong className="text-gray-800">{status}</strong></p>
                 {principal.chegada_em && <p>Chegada: {new Date(principal.chegada_em).toLocaleString('pt-BR')}</p>}
@@ -168,6 +203,9 @@ export default function DetalheCliente() {
                 {principal.fim_em && <p>Fim: {new Date(principal.fim_em).toLocaleString('pt-BR')}</p>}
                 {notas.some((n) => n.problema_descricao) && (
                     <p>Problema: {notas.find((n) => n.problema_descricao).problema_descricao}</p>
+                )}
+                {notas.some((n) => n.nao_entregue_motivo) && (
+                    <p>Não entregue: {notas.find((n) => n.nao_entregue_motivo).nao_entregue_motivo}</p>
                 )}
             </div>
         </div>

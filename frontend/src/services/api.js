@@ -27,10 +27,11 @@ export const api = {
     minhasCargas: () => request('/cargas'),
     obterCarga: (id) => request(`/cargas/${id}`),
     finalizarCarga: (id) => request(`/cargas/${id}/finalizar`, { method: 'PATCH' }),
-    atualizarStatusParada: (id, status, problemaDescricao) =>
-        request(`/paradas/${id}/status`, { method: 'PATCH', body: { status, problemaDescricao } }),
-    atualizarStatusGrupo: (paradaIds, status, problemaDescricao) =>
-        request('/paradas/grupo/status', { method: 'PATCH', body: { paradaIds, status, problemaDescricao } }),
+    registrarSaida: (id, hodometroKm) => request(`/cargas/${id}/saida`, { method: 'PATCH', body: { hodometroKm } }),
+    atualizarStatusParada: (id, status, problemaDescricao, naoEntregueMotivo) =>
+        request(`/paradas/${id}/status`, { method: 'PATCH', body: { status, problemaDescricao, naoEntregueMotivo } }),
+    atualizarStatusGrupo: (paradaIds, status, problemaDescricao, naoEntregueMotivo) =>
+        request('/paradas/grupo/status', { method: 'PATCH', body: { paradaIds, status, problemaDescricao, naoEntregueMotivo } }),
     listarParadasManuais: (cargaId) => request(`/paradas/manuais/carga/${cargaId}`),
     criarParadaManual: (cargaId, tipo, observacao) =>
         request('/paradas/manuais', { method: 'POST', body: { cargaId, tipo, observacao } }),
@@ -48,6 +49,11 @@ export const api = {
         request(`/dashboard/rotas/${id}/motorista`, { method: 'PATCH', body: { motoristaId }, auth: false }),
     sincronizarVeiculo: (id) =>
         request(`/dashboard/rotas/${id}/sincronizar-veiculo`, { method: 'PATCH', auth: false }),
+    definirProgramado: (id, programadoSaidaEm, programadoChegadaEm) =>
+        request(`/dashboard/rotas/${id}/programado`, { method: 'PATCH', body: { programadoSaidaEm, programadoChegadaEm }, auth: false }),
+    indicadores: (inicio, fim) =>
+        request(`/dashboard/indicadores?inicio=${inicio}&fim=${fim}`, { auth: false }),
+    exportarIndicadoresUrl: (inicio, fim) => `${API_BASE_URL}/dashboard/indicadores/exportar?inicio=${inicio}&fim=${fim}`,
     obterConfigCusto: () => request('/planejamento/config-custo', { auth: false }),
     atualizarConfigCusto: (config) =>
         request('/planejamento/config-custo', { method: 'PUT', body: config, auth: false }),

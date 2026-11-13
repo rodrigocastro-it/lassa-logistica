@@ -8,7 +8,8 @@ const STATUS_COR = {
     chegada: 'bg-yellow-100 text-yellow-800',
     inicio: 'bg-lassa-leve/20 text-lassa-profundo',
     fim: 'bg-green-100 text-green-800',
-    problema: 'bg-lassa-vermelho/10 text-lassa-vermelho'
+    problema: 'bg-lassa-vermelho/10 text-lassa-vermelho',
+    nao_entregue: 'bg-gray-700/10 text-gray-700'
 };
 
 function distanciaKm(lat1, lon1, lat2, lon2) {
@@ -28,11 +29,43 @@ export default function DashboardRotaDetalhe() {
     const [motoristas, setMotoristas] = useState([]);
     const [reatribuindo, setReatribuindo] = useState(false);
     const [sincronizando, setSincronizando] = useState(false);
+    const [programadoSaida, setProgramadoSaida] = useState('');
+    const [programadoChegada, setProgramadoChegada] = useState('');
+    const [salvandoProgramado, setSalvandoProgramado] = useState(false);
+
+    function paraInputDatetime(v) {
+        if (!v) return '';
+        const d = new Date(v);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().slice(0, 16);
+    }
 
     useEffect(() => {
-        api.dashboardRotaDetalhe(id).then(setRota);
+        api.dashboardRotaDetalhe(id).then((detalhe) => {
+            setRota(detalhe);
+            setProgramadoSaida(paraInputDatetime(detalhe.programado_saida_em));
+            setProgramadoChegada(paraInputDatetime(detalhe.programado_chegada_em));
+        });
         api.listarMotoristas().then(setMotoristas).catch(() => {});
     }, [id]);
+
+    async function handleSalvarProgramado(e) {
+        e.preventDefault();
+        setSalvandoProgramado(true);
+        try {
+            await api.definirProgramado(
+                id,
+                programadoSaida ? new Date(programadoSaida).toISOString() : null,
+                programadoChegada ? new Date(programadoChegada).toISOString() : null
+            );
+            const detalhe = await api.dashboardRotaDetalhe(id);
+            setRota(detalhe);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setSalvandoProgramado(false);
+        }
+    }
 
     async function handleReatribuir(e) {
         const motoristaId = e.target.value || null;
@@ -112,6 +145,46 @@ export default function DashboardRotaDetalhe() {
                 </div>
             </div>
 
+            <form onSubmit={handleSalvarProgramado} className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+                <p className="text-sm font-semibold text-gray-700">Programado × real (reunião semanal)</p>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Saída programada</label>
+                        <input
+                            type="datetime-local"
+                            value={programadoSaida}
+                            onChange={(e) => setProgramadoSaida(e.target.value)}
+                            className="w-full border rounded-lg px-2 py-1.5 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Chegada programada</label>
+                        <input
+                            type="datetime-local"
+                            value={programadoChegada}
+                            onChange={(e) => setProgramadoChegada(e.target.value)}
+                            className="w-full border rounded-lg px-2 py-1.5 text-sm"
+                        />
+                    </div>
+                </div>
+                <button
+                    type="submit"
+                    disabled={salvandoProgramado}
+                    className="bg-lassa-azul text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50"
+                >
+                    {salvandoProgramado ? 'Salvando...' : 'Salvar programado'}
+                </button>
+                <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 border-t pt-3">
+                    <p>Saída real: <span className="text-gray-800">
+                        {rota.saida_em ? new Date(rota.saida_em).toLocaleString('pt-BR') : '—'}
+                        {rota.saida_hodometro_km && ` (${rota.saida_hodometro_km} km)`}
+                    </span></p>
+                    <p>Retorno real: <span className="text-gray-800">
+                        {rota.retorno_em ? new Date(rota.retorno_em).toLocaleString('pt-BR') : '—'}
+                    </span></p>
+                </div>
+            </form>
+
             {posicao && (
                 <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
                     <MapaVeiculo latitude={posicao.latitude} longitude={posicao.longitude} popup={rota.veiculo_placa} />
@@ -137,6 +210,9 @@ export default function DashboardRotaDetalhe() {
                                     <p className="text-sm text-gray-500">{p.cliente_endereco}</p>
                                     {p.problema_descricao && (
                                         <p className="text-sm text-lassa-vermelho">Problema: {p.problema_descricao}</p>
+                                    )}
+                                    {p.nao_entregue_motivo && (
+                                        <p className="text-sm text-gray-700">Não entregue: {p.nao_entregue_motivo}</p>
                                     )}
                                 </div>
                                 <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COR[p.status]}`}>{p.status}</span>

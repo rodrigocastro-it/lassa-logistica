@@ -13,6 +13,7 @@ import DashboardRotas from './pages/dashboard/DashboardRotas';
 import DashboardRotaDetalhe from './pages/dashboard/DashboardRotaDetalhe';
 import MontarRota from './pages/dashboard/MontarRota';
 import Planejamento from './pages/dashboard/Planejamento';
+import Indicadores from './pages/dashboard/Indicadores';
 
 function RotaPrivada({ children }) {
     const { motorista } = useAuth();
@@ -35,6 +36,7 @@ export default function App() {
                     <Route path="/dashboard/rotas/:id" element={<DashboardRotaDetalhe />} />
                     <Route path="/dashboard/montar" element={<MontarRota />} />
                     <Route path="/dashboard/planejamento" element={<Planejamento />} />
+                    <Route path="/dashboard/indicadores" element={<Indicadores />} />
 
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>

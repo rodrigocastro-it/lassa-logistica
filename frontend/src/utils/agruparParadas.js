@@ -6,7 +6,7 @@
 
 // pior-caso primeiro: se qualquer nota do cliente estiver com problema, o
 // bloco inteiro aparece como problema; senão, mostra o estágio mais atrasado.
-const ORDEM_STATUS = { problema: 0, pendente: 1, chegada: 2, inicio: 3, fim: 4 };
+const ORDEM_STATUS = { problema: 0, nao_entregue: 0, pendente: 1, chegada: 2, inicio: 3, fim: 4 };
 
 export function agruparParadasPorCliente(paradas) {
     const grupos = [];
@@ -30,6 +30,7 @@ export function agruparParadasPorCliente(paradas) {
 
 export function statusDoGrupo(paradasDoGrupo) {
     if (paradasDoGrupo.some((p) => p.status === 'problema')) return 'problema';
+    if (paradasDoGrupo.some((p) => p.status === 'nao_entregue')) return 'nao_entregue';
     return paradasDoGrupo.reduce(
         (pior, p) => (ORDEM_STATUS[p.status] < ORDEM_STATUS[pior] ? p.status : pior),
         paradasDoGrupo[0].status

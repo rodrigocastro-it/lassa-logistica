@@ -253,3 +253,54 @@ Conclusão:
   o OSRM (motor de rotas open source) com um perfil de caminhão — mais
   trabalho técnico de infraestrutura, mas sem custo recorrente nem risco de
   cobrança surpresa.
+
+## Indicadores de Entrega (reunião semanal, pedido da Zuleika em 2026-11-11)
+
+A Zuleika (alinhada com a Roberta) pediu uma reunião semanal de
+acompanhamento de entregas, com: rota (cidades), placa, motorista, dia/hora
+programado e real de saída, km da saída, pedidos (notas), ocorrências,
+dia/hora programado e real de chegada, se voltou com pedido não entregue.
+
+Confirmado com o Rodrigo em 2026-11-13 (sem adivinhar processo):
+- O horário/dia **programado** é digitado por quem monta a carga
+  (Jacineuda/Nina) -- novos campos `programado_saida_em` /
+  `programado_chegada_em` em `cargas`, editáveis a qualquer momento via
+  `PATCH /dashboard/rotas/:id/programado` (tela: `DashboardRotaDetalhe`).
+- "Km da saída" é o **hodômetro do caminhão**, digitado pelo motorista
+  (não dá pra capturar automaticamente) -- novo campo
+  `saida_hodometro_km`. O app do motorista agora pede essa leitura antes
+  de mostrar a rota, toda vez que uma carga ainda não tem `saida_em`
+  registrado (`PATCH /cargas/:id/saida`, idempotente via COALESCE pra não
+  sobrescrever se reabrir o app).
+- "Se voltou com pedido" é um status **novo e separado** de "problema":
+  problema = ocorrência durante a entrega (ex: trânsito, atraso); não
+  entregue = o pedido simplesmente não foi deixado e voltou no caminhão.
+  Novo status `nao_entregue` em `paradas` (com `nao_entregue_motivo` e
+  `nao_entregue_em`), com botão próprio no app do motorista
+  (`DetalheCliente`), separado do botão "Problema".
+
+Migração: `010_indicadores_entrega.sql`.
+
+Implementado:
+- `retorno_em` em `cargas`, gravado automaticamente ao finalizar a rota
+  (`PATCH /cargas/:id/finalizar`) -- é a chegada real de volta na empresa,
+  diferente da chegada no último cliente.
+- `GET /dashboard/indicadores?inicio=&fim=` -- uma linha por carga no
+  período, com tudo acima agregado (pedidos, ocorrências, não entregues).
+  As cidades da rota vêm do WiBi (mesmo serviço do Planejamento de Carga,
+  `wibiCargaService.getCargaParaAvaliacao`) -- se o WiBi falhar pra uma
+  carga específica, ela ainda aparece no relatório, só sem a lista de
+  cidades (best-effort).
+- `GET /dashboard/indicadores/exportar` -- CSV pra levar pra reunião
+  (Excel/Google Sheets), mesmo padrão do exportar de rota que já existia.
+- Tela nova `/dashboard/indicadores` com filtro de período e os mesmos
+  números, pra consulta rápida sem precisar abrir o CSV.
+
+Testado contra Postgres local (migração + query de agregação com dados
+sintéticos) e o servidor real subindo sem erro antes de ir pro ar.
+
+**Ainda não resolvido:** a torre de controle hoje só define o programado
+depois que a carga já foi montada (na tela de detalhe) -- não dá pra
+definir programado ANTES de montar a carga no WiBi, porque a carga local
+só existe depois de montada. Se isso for um problema na prática, pode
+precisar de uma tabela de "programação" separada da carga em si.
