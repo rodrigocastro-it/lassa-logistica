@@ -3,6 +3,7 @@ const { pool } = require('../db/pg');
 const { obterPosicaoPorPlaca } = require('../services/pointTrackService');
 const { montarOuObterRota } = require('../services/montarRotaService');
 const { getCargaByNumero, listarCargasAbertas, listarCargasEmEntrega, getCargaParaAvaliacao } = require('../services/wibiCargaService');
+const { identificarRotaPorNome } = require('../services/rotasConhecidasService');
 const { distanciaHaversineKm } = require('../services/routeOptimizer');
 const { asyncHandler } = require('../middleware/asyncHandler');
 
@@ -207,6 +208,31 @@ router.patch('/rotas/:id/sincronizar-veiculo', asyncHandler(async (req, res) => 
     }
 }));
 
+// A Nina (supervisora da logística) acompanha devoluções num caderninho e
+// numa planilha que ela ia atualizando e mandando no grupo -- pedido do
+// Rodrigo em 2026-11-13 pra trazer isso pro sistema. A obrigação de marcar
+// "não entregue" continua sendo do motorista (ver paradas.js); isso aqui é
+// só um reforço pra Nina poder registrar ela mesma quando perceber que o
+// motorista esqueceu, sem precisar que ele reabra o app.
+router.patch('/paradas/:id/nao-entregue', asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { motivo } = req.body;
+    if (!motivo) {
+        return res.status(400).json({ erro: 'Descreva o motivo de não ter entregado.' });
+    }
+    const result = await pool.query(
+        `UPDATE paradas
+         SET status = 'nao_entregue', nao_entregue_em = now(), nao_entregue_motivo = $1
+         WHERE id = $2
+         RETURNING *`,
+        [motivo, id]
+    );
+    if (result.rows.length === 0) {
+        return res.status(404).json({ erro: 'Parada não encontrada.' });
+    }
+    res.json(result.rows[0]);
+}));
+
 // Define o dia/horário PROGRAMADO de saída e chegada -- quem monta a carga
 // (Jacineuda/Nina) digita a meta, pra comparar depois com o real na
 // reunião semanal de acompanhamento (pedido da Zuleika em 2026-11-11).
@@ -316,6 +342,107 @@ router.get('/indicadores/exportar', asyncHandler(async (req, res) => {
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="indicadores-entrega-${inicio}-a-${fim}.csv"`);
+    res.send(`﻿${csv.join('\n')}`);
+}));
+
+// Relatório de devoluções, no mesmo formato da planilha que a Nina já
+// mantinha manualmente (ROTA, QUANTIDADE, VALOR, MOTIVO) -- substitui o
+// caderninho/planilha/grupo do WhatsApp, usando os "não entregue" já
+// registrados (pelo motorista ou pela própria Nina) em vez de compilar à
+// mão. O valor de cada nota vem do WiBi (vd_valortotal); se o WiBi falhar
+// pra uma carga específica, as paradas dela entram sem valor (não
+// derruba o relatório inteiro, só fica sem o R$ daquele item).
+async function montarDevolucoes(inicio, fim) {
+    const paradasResult = await pool.query(
+        `SELECT p.id, p.wibi_vd_codigo, p.cliente_nome, p.nao_entregue_motivo, p.nao_entregue_em,
+                c.wibi_ca_id, c.data_entrega
+         FROM paradas p
+         JOIN cargas c ON c.id = p.carga_id
+         WHERE p.status = 'nao_entregue' AND c.data_entrega BETWEEN $1 AND $2
+         ORDER BY c.data_entrega DESC`,
+        [inicio, fim]
+    );
+
+    const porCarga = new Map();
+    for (const p of paradasResult.rows) {
+        if (!porCarga.has(p.wibi_ca_id)) porCarga.set(p.wibi_ca_id, []);
+        porCarga.get(p.wibi_ca_id).push(p);
+    }
+
+    const itens = [];
+    for (const [caId, paradas] of porCarga.entries()) {
+        let vendasPorCodigo = new Map();
+        try {
+            const cargaWibi = await getCargaParaAvaliacao(caId);
+            vendasPorCodigo = new Map((cargaWibi?.vendas || []).map((v) => [v.vdCodigo, v]));
+        } catch (err) {
+            console.error(`Erro ao buscar valores da carga ${caId} no WiBi pra devoluções:`, err);
+        }
+
+        for (const p of paradas) {
+            const venda = vendasPorCodigo.get(p.wibi_vd_codigo);
+            const cidadeNome = venda?.cidadeNome || null;
+            const rotaId = cidadeNome ? await identificarRotaPorNome(cidadeNome) : null;
+            let rotaNome = cidadeNome || 'Sem cidade identificada';
+            if (rotaId) {
+                const rotaResult = await pool.query('SELECT nome FROM rotas WHERE id = $1', [rotaId]);
+                rotaNome = rotaResult.rows[0]?.nome || rotaNome;
+            }
+            itens.push({
+                rota: rotaNome,
+                valor: venda?.valorTotal ?? null,
+                motivo: p.nao_entregue_motivo,
+                cargaId: caId,
+                clienteNome: p.cliente_nome,
+                dataEntrega: p.data_entrega,
+                naoEntregueEm: p.nao_entregue_em
+            });
+        }
+    }
+
+    const porRota = new Map();
+    for (const item of itens) {
+        if (!porRota.has(item.rota)) {
+            porRota.set(item.rota, { rota: item.rota, quantidade: 0, valor: 0, motivos: [], itens: [] });
+        }
+        const grupo = porRota.get(item.rota);
+        grupo.quantidade += 1;
+        grupo.valor += item.valor || 0;
+        if (item.motivo) grupo.motivos.push(item.motivo);
+        grupo.itens.push(item);
+    }
+
+    return [...porRota.values()].sort((a, b) => b.quantidade - a.quantidade);
+}
+
+router.get('/devolucoes', asyncHandler(async (req, res) => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const inicio = req.query.inicio || seteDiasAtras;
+    const fim = req.query.fim || hoje;
+    res.json(await montarDevolucoes(inicio, fim));
+}));
+
+router.get('/devolucoes/exportar', asyncHandler(async (req, res) => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const inicio = req.query.inicio || seteDiasAtras;
+    const fim = req.query.fim || hoje;
+    const grupos = await montarDevolucoes(inicio, fim);
+
+    const escapar = (v) => String(v ?? '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+    const csv = [
+        ['ROTA', 'QUANTIDADE', 'VALOR', 'MOTIVO'].join(';'),
+        ...grupos.map((g) => [
+            escapar(g.rota),
+            g.quantidade,
+            g.valor ? g.valor.toFixed(2).replace('.', ',') : '',
+            escapar(g.motivos.join(' | '))
+        ].join(';'))
+    ];
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="devolucoes-${inicio}-a-${fim}.csv"`);
     res.send(`﻿${csv.join('\n')}`);
 }));
 

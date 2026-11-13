@@ -304,3 +304,40 @@ depois que a carga já foi montada (na tela de detalhe) -- não dá pra
 definir programado ANTES de montar a carga no WiBi, porque a carga local
 só existe depois de montada. Se isso for um problema na prática, pode
 precisar de uma tabela de "programação" separada da carga em si.
+
+## Devoluções (torre de controle), pedido do Rodrigo em 2026-11-13
+
+A Nina (supervisora da logística) já mantinha um controle de devoluções
+num caderninho e numa planilha (que ela ia atualizando e mandando no
+grupo do WhatsApp) -- colunas ROTA, QUANTIDADE, VALOR, MOTIVO, por período
+(ex: "29/06 à 04/07"). O Rodrigo pediu pra trazer isso pro sistema: a
+torre de controle também poder registrar devolução, como reforço de
+quando o motorista esquecer de marcar no app -- mas a obrigação de marcar
+continua sendo do motorista, a Nina só supervisiona/confere.
+
+Decisão de design: em vez de criar um registro solto desconectado dos
+dados reais (ex: uma tabela de texto livre tipo a planilha), reaproveitei
+o mesmo status `nao_entregue` já implementado nas paradas (pedido da
+Zuleika, ver seção acima) -- a torre agora também pode marcar uma parada
+existente como "não entregue" (`PATCH /dashboard/paradas/:id/nao-entregue`,
+botão na tela de detalhe da rota). Isso mantém uma fonte única de verdade
+(a mesma parada/venda real), em vez de duplicar informação numa planilha
+paralela.
+
+O relatório (`GET /dashboard/devolucoes`, + `/exportar` em CSV, tela
+`/dashboard/devolucoes`) agrupa automaticamente as paradas "não entregue"
+por **rota** (não por cidade/distrito isolado -- reaproveita
+`identificarRotaPorNome`, o mesmo matching usado no Planejamento de
+Carga), somando quantidade e valor (puxado do WiBi, `vd_valortotal`) e
+listando os motivos -- no mesmo formato da planilha da Nina, só que
+calculado automaticamente a partir do que já está registrado, sem
+precisar compilar à mão.
+
+Testado com dados sintéticos (stub do WiBi) contra Postgres local: bateu
+exatamente o formato/valores da planilha real da Nina (ex: Santana R$152
+"CLIENTE FECHADO", Massapê R$221,20 "CLIENTE NÃO FOI BUSCAR").
+
+**Ainda não resolvido:** se uma devolução não tiver nenhuma venda
+associada no WiBi que bata com a localidade (ex: pedido duplicado que não
+é bem uma "devolução de produto"), ela cai em "Sem cidade identificada"
+-- não tentei adivinhar categoria nenhuma pra esses casos.

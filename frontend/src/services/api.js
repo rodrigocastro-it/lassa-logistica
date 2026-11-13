@@ -54,6 +54,11 @@ export const api = {
     indicadores: (inicio, fim) =>
         request(`/dashboard/indicadores?inicio=${inicio}&fim=${fim}`, { auth: false }),
     exportarIndicadoresUrl: (inicio, fim) => `${API_BASE_URL}/dashboard/indicadores/exportar?inicio=${inicio}&fim=${fim}`,
+    marcarNaoEntregueTorre: (paradaId, motivo) =>
+        request(`/dashboard/paradas/${paradaId}/nao-entregue`, { method: 'PATCH', body: { motivo }, auth: false }),
+    devolucoes: (inicio, fim) =>
+        request(`/dashboard/devolucoes?inicio=${inicio}&fim=${fim}`, { auth: false }),
+    exportarDevolucoesUrl: (inicio, fim) => `${API_BASE_URL}/dashboard/devolucoes/exportar?inicio=${inicio}&fim=${fim}`,
     obterConfigCusto: () => request('/planejamento/config-custo', { auth: false }),
     atualizarConfigCusto: (config) =>
         request('/planejamento/config-custo', { method: 'PUT', body: config, auth: false }),

@@ -32,6 +32,7 @@ export default function DashboardRotaDetalhe() {
     const [programadoSaida, setProgramadoSaida] = useState('');
     const [programadoChegada, setProgramadoChegada] = useState('');
     const [salvandoProgramado, setSalvandoProgramado] = useState(false);
+    const [marcandoNaoEntregueId, setMarcandoNaoEntregueId] = useState(null);
 
     function paraInputDatetime(v) {
         if (!v) return '';
@@ -76,6 +77,21 @@ export default function DashboardRotaDetalhe() {
             setRota(detalhe);
         } finally {
             setReatribuindo(false);
+        }
+    }
+
+    async function handleMarcarNaoEntregue(paradaId) {
+        const motivo = window.prompt('Por que não foi entregue? (ex: cliente recusou, estabelecimento fechado...)');
+        if (!motivo) return;
+        setMarcandoNaoEntregueId(paradaId);
+        try {
+            await api.marcarNaoEntregueTorre(paradaId, motivo);
+            const detalhe = await api.dashboardRotaDetalhe(id);
+            setRota(detalhe);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setMarcandoNaoEntregueId(null);
         }
     }
 
@@ -215,7 +231,19 @@ export default function DashboardRotaDetalhe() {
                                         <p className="text-sm text-gray-700">Não entregue: {p.nao_entregue_motivo}</p>
                                     )}
                                 </div>
-                                <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COR[p.status]}`}>{p.status}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COR[p.status]}`}>{p.status}</span>
+                                    {p.status !== 'nao_entregue' && (
+                                        <button
+                                            onClick={() => handleMarcarNaoEntregue(p.id)}
+                                            disabled={marcandoNaoEntregueId === p.id}
+                                            className="text-xs text-gray-500 underline whitespace-nowrap disabled:opacity-50"
+                                            title="Reforço da Nina pra quando o motorista esquecer de marcar no app — a obrigação continua sendo dele"
+                                        >
+                                            {marcandoNaoEntregueId === p.id ? 'marcando...' : 'marcar não entregue'}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {temGpsChegada && (

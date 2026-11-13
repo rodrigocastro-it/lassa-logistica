@@ -50,6 +50,12 @@ export default function DashboardRotas() {
                             Indicadores
                         </Link>
                         <Link
+                            to="/dashboard/devolucoes"
+                            className="text-lassa-azul hover:underline text-sm font-medium"
+                        >
+                            Devoluções
+                        </Link>
+                        <Link
                             to="/dashboard/montar"
                             className="bg-lassa-azul hover:bg-lassa-profundo transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium"
                         >
